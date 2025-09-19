@@ -1,24 +1,24 @@
 {
   "main": {
-    "id": "69a1985f64806fa0",
+    "id": "4fa45850fe439d31",
     "type": "split",
     "children": [
       {
-        "id": "84cb079921d38558",
+        "id": "698c50363d78ca48",
         "type": "tabs",
         "children": [
           {
-            "id": "edd51a3081b3a8f3",
+            "id": "0a641e8a0d5c092d",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "README.md",
+                "file": "Rust/Rust Workspaces.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "Rust Workspaces"
             }
           }
         ]
@@ -27,15 +27,15 @@
     "direction": "vertical"
   },
   "left": {
-    "id": "9f0cb1bac1d47047",
+    "id": "2f0c77c07e7097a4",
     "type": "split",
     "children": [
       {
-        "id": "3a6f4563dc00e4eb",
+        "id": "2df60dc390a8058c",
         "type": "tabs",
         "children": [
           {
-            "id": "4c53f025a70b2188",
+            "id": "0ac4ac085500545c",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -48,7 +48,7 @@
             }
           },
           {
-            "id": "b6e94e2c653de35e",
+            "id": "cca2e5633a68ed95",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -65,7 +65,7 @@
             }
           },
           {
-            "id": "1ff8098d8f866fa8",
+            "id": "102182068829fb40",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -81,20 +81,19 @@
     "width": 300
   },
   "right": {
-    "id": "943ae656afe3b9f3",
+    "id": "65c022f988f675b0",
     "type": "split",
     "children": [
       {
-        "id": "d0567497a99d44ad",
+        "id": "5401b7b6e2134c26",
         "type": "tabs",
         "children": [
           {
-            "id": "bd162da4c0460727",
+            "id": "f4a03992ab263c94",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "README.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,25 +103,24 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Rückverweise für README"
+              "title": "Rückverweis"
             }
           },
           {
-            "id": "661944943973fcd7",
+            "id": "56d4cb30f7a09e59",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "README.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Ausgehende Links von README öffnen"
+              "title": "Ausgehende Links"
             }
           },
           {
-            "id": "62eb6bbd1a9d18df",
+            "id": "0e5888e64882c7a1",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -137,22 +135,20 @@
             }
           },
           {
-            "id": "c64d858ff2206f55",
+            "id": "daebd0c33b027cc3",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "README.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Gliederung von README"
+              "title": "Gliederung"
             }
           }
-        ],
-        "currentTab": 3
+        ]
       }
     ],
     "direction": "horizontal",
@@ -170,19 +166,9 @@
       "bases:Create new base": false
     }
   },
-  "active": "edd51a3081b3a8f3",
+  "active": "0a641e8a0d5c092d",
   "lastOpenFiles": [
-    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-6916edh09dct4k0dyh4vhplw9/work-products.bin",
-    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-6916edh09dct4k0dyh4vhplw9/query-cache.bin",
-    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-6916edh09dct4k0dyh4vhplw9/dep-graph.bin",
-    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-6916edh09dct4k0dyh4vhplw9",
-    "more_hands/target/debug/incremental/more_hands-33kgfk7n8of7o/s-hb9k2109uq-1na07zk-2urc013gdrvosq7h21ped9dbb/work-products.bin",
-    "more_hands/target/debug/incremental/more_hands-33kgfk7n8of7o/s-hb9k2109uq-1na07zk-2urc013gdrvosq7h21ped9dbb/query-cache.bin",
-    "more_hands/target/debug/incremental/more_hands-33kgfk7n8of7o/s-hb9k2109uq-1na07zk-2urc013gdrvosq7h21ped9dbb/dep-graph.bin",
-    "more_hands/target/debug/incremental/more_hands-33kgfk7n8of7o/s-hb9k2109uq-1na07zk-2urc013gdrvosq7h21ped9dbb",
-    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-working/work-products.bin",
-    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-working/dep-graph.part.bin",
-    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-working/query-cache.bin",
-    "README.md"
+    "Rust/Rust Workspaces.md",
+    "Rust"
   ]
 }
