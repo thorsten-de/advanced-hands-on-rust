@@ -3,5 +3,6 @@
   "attachmentFolderPath": "./",
   "newFileLocation": "current",
   "vimMode": true,
-  "alwaysUpdateLinks": true
+  "alwaysUpdateLinks": true,
+  "showInlineTitle": false
 }

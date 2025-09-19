@@ -1,3 +1,5 @@
 {
-  "accentColor": "#9e6400"
+  "accentColor": "#9e6400",
+  "showViewHeader": true,
+  "showRibbon": true
 }
