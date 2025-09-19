@@ -156,7 +156,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -169,8 +170,19 @@
       "bases:Create new base": false
     }
   },
-  "active": "c64d858ff2206f55",
+  "active": "edd51a3081b3a8f3",
   "lastOpenFiles": [
+    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-6916edh09dct4k0dyh4vhplw9/work-products.bin",
+    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-6916edh09dct4k0dyh4vhplw9/query-cache.bin",
+    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-6916edh09dct4k0dyh4vhplw9/dep-graph.bin",
+    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-6916edh09dct4k0dyh4vhplw9",
+    "more_hands/target/debug/incremental/more_hands-33kgfk7n8of7o/s-hb9k2109uq-1na07zk-2urc013gdrvosq7h21ped9dbb/work-products.bin",
+    "more_hands/target/debug/incremental/more_hands-33kgfk7n8of7o/s-hb9k2109uq-1na07zk-2urc013gdrvosq7h21ped9dbb/query-cache.bin",
+    "more_hands/target/debug/incremental/more_hands-33kgfk7n8of7o/s-hb9k2109uq-1na07zk-2urc013gdrvosq7h21ped9dbb/dep-graph.bin",
+    "more_hands/target/debug/incremental/more_hands-33kgfk7n8of7o/s-hb9k2109uq-1na07zk-2urc013gdrvosq7h21ped9dbb",
+    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-working/work-products.bin",
+    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-working/dep-graph.part.bin",
+    "more_hands/target/debug/incremental/more_hands-248o3l84vngol/s-hb9k210c4n-1qp9uf2-working/query-cache.bin",
     "README.md"
   ]
 }
