@@ -41,12 +41,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Gaming/Nachrichten.md",
+                "file": "Gaming/Frame.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Nachrichten"
+              "title": "Frame"
             }
           }
         ],
@@ -197,10 +197,13 @@
   },
   "active": "0a4946e1124e6c9d",
   "lastOpenFiles": [
-    "Gaming/Entity Component System.md",
-    "Gaming/Nachrichten.md",
-    "Gaming/Entität.md",
+    "Gaming/Resource.md",
     "Gaming/Bevy.md",
+    "Gaming/Frame.md",
+    "Gaming/Commands.md",
+    "Gaming/Nachrichten.md",
+    "Gaming/Entity Component System.md",
+    "Gaming/Entität.md",
     "Gaming/Komponente.md",
     "Gaming/System.md",
     "Rust/Rust Workspaces.md",
