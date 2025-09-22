@@ -3,7 +3,8 @@ name = "more_hands"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-
 [workspace]
-members = ["hello_world"]
+members = ["hello_bevy", "hello_world"]
+
+[workspace.dependencies]
+bevy = "0.16.1"
