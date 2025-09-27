@@ -27,3 +27,19 @@ impl Default for RandomNumberGenerator {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_range_bounds() {
+        let mut rng = RandomNumberGenerator::new();
+
+        for _ in 0..1000 {
+            let n = rng.range(1..10);
+            assert!(n >= 1);
+            assert!(n < 10);
+        }
+    }
+}
