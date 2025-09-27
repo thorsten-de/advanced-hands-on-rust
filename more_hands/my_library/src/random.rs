@@ -42,4 +42,19 @@ mod test {
             assert!(n < 10);
         }
     }
+
+    #[test]
+    fn test_reproducibility() {
+        let mut rng = (
+            RandomNumberGenerator::seeded(1),
+            RandomNumberGenerator::seeded(1),
+        );
+
+        (0..1000).for_each(|_| {
+            assert_eq!(
+                rng.0.range(u32::MIN..u32::MAX),
+                rng.1.range(u32::MIN..u32::MAX),
+            );
+        });
+    }
 }
