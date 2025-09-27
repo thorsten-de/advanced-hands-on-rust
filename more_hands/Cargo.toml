@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = ["hello_bevy", "hello_world", "my_library"]
+members = ["hello_bevy", "hello_world", "my_library", "pig"]
 
 [workspace.dependencies]
 bevy = "0.16.1"
+bevy_egui = "0.36.0"
