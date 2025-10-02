@@ -39,7 +39,9 @@ struct HandTImer(Timer);
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(EguiPlugin::default())
+        .add_plugins(EguiPlugin {
+            enable_multipass_for_primary_context: false,
+        })
         .add_systems(Startup, setup)
         .init_state::<GamePhase>()
         .add_systems(Update, display_score)
