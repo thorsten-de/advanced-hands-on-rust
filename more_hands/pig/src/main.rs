@@ -45,7 +45,7 @@ fn main() {
         .add_systems(Startup, setup)
         .init_state::<GamePhase>()
         .add_systems(Update, display_score)
-        // .add_systems(Update, player.run_if(in_state(GamePhase::Player)))
+        .add_systems(Update, player.run_if(in_state(GamePhase::Player)))
         // .add_systems(Update, cpu.run_if(in_state(GamePhase::Cpu)))
         .run();
 }
@@ -76,5 +76,83 @@ fn display_score(scores: Res<Scores>, mut egui_context: EguiContexts) {
     egui::Window::new("Total Scores").show(egui_context.ctx_mut(), |ui| {
         ui.label(&format!("Player: {}", scores.player));
         ui.label(&format!("CPU: {}", scores.cpu));
+    });
+}
+
+fn spawn_die(
+    hand_query: &Query<(Entity, &Sprite), With<HandDie>>,
+    commands: &mut Commands,
+    assets: &GameAssets,
+    new_roll: usize,
+    color: Color,
+) {
+    let rolled_die = hand_query.iter().count() as f32 * 52.0;
+
+    let mut sprite = Sprite::from_atlas_image(
+        assets.image.clone(),
+        TextureAtlas {
+            layout: assets.layout.clone(),
+            index: new_roll - 1,
+        },
+    );
+
+    sprite.color = color;
+
+    commands.spawn((
+        sprite,
+        Transform::from_xyz(rolled_die - 400.0, 60.0, 1.0),
+        HandDie,
+    ));
+}
+
+fn clear_die(hand_query: &Query<(Entity, &Sprite), With<HandDie>>, commands: &mut Commands) {
+    hand_query
+        .iter()
+        .for_each(|(entity, _)| commands.entity(entity).despawn());
+}
+
+fn player(
+    hand_query: Query<(Entity, &Sprite), With<HandDie>>,
+    mut commands: Commands,
+    mut rng: ResMut<Random>,
+    assets: Res<GameAssets>,
+    mut scores: ResMut<Scores>,
+    mut state: ResMut<NextState<GamePhase>>,
+    mut egui_context: EguiContexts,
+) {
+    egui::Window::new("Play Options").show(egui_context.ctx_mut(), |ui| {
+        let hand_score: usize = hand_query
+            .iter()
+            .map(|(_, ts)| ts.texture_atlas.as_ref().unwrap().index + 1)
+            .sum();
+
+        ui.label(&format!("Score for this hand: {hand_score}"));
+
+        if ui.button("Roll Dice").clicked() {
+            let new_roll = rng.0.range(1..7);
+            if new_roll == 1 {
+                // End turn
+                clear_die(&hand_query, &mut commands);
+                state.set(GamePhase::Cpu);
+            } else {
+                spawn_die(
+                    &hand_query,
+                    &mut commands,
+                    &assets,
+                    new_roll as usize,
+                    Color::WHITE,
+                );
+            }
+        }
+
+        if ui.button("Pass - Keep Hand Score").clicked() {
+            let hand_total: usize = hand_query
+                .iter()
+                .map(|(_, ts)| ts.texture_atlas.as_ref().unwrap().index + 1)
+                .sum();
+            scores.player += hand_total;
+            clear_die(&hand_query, &mut commands);
+            state.set(GamePhase::Cpu);
+        }
     });
 }
