@@ -46,7 +46,7 @@ fn main() {
         .init_state::<GamePhase>()
         .add_systems(Update, display_score)
         .add_systems(Update, player.run_if(in_state(GamePhase::Player)))
-        // .add_systems(Update, cpu.run_if(in_state(GamePhase::Cpu)))
+        .add_systems(Update, cpu.run_if(in_state(GamePhase::Cpu)))
         .run();
 }
 
@@ -155,4 +155,45 @@ fn player(
             state.set(GamePhase::Cpu);
         }
     });
+}
+
+fn cpu(
+    hand_query: Query<(Entity, &Sprite), With<HandDie>>,
+    mut state: ResMut<NextState<GamePhase>>,
+    mut scores: ResMut<Scores>,
+    mut rng: ResMut<Random>,
+    mut commands: Commands,
+    assets: Res<GameAssets>,
+    mut timer: ResMut<HandTImer>,
+    time: Res<Time>,
+) {
+    timer.0.tick(time.delta());
+    if timer.0.just_finished() {
+        let hand_total: usize = hand_query
+            .iter()
+            .map(|(_, ts)| ts.texture_atlas.as_ref().unwrap().index + 1)
+            .sum();
+
+        if hand_total < 20 && scores.cpu + hand_total < 100 {
+            let new_roll = rng.0.range(1..7);
+            if new_roll == 1 {
+                clear_die(&hand_query, &mut commands);
+                state.set(GamePhase::Player);
+            } else {
+                spawn_die(
+                    &hand_query,
+                    &mut commands,
+                    &assets,
+                    new_roll as usize,
+                    Color::Srgba(Srgba::new(0.0, 0.0, 1.0, 1.0)),
+                );
+            }
+        } else {
+            scores.cpu += hand_total;
+            state.set(GamePhase::Player);
+            hand_query
+                .iter()
+                .for_each(|(entity, _)| commands.entity(entity).despawn());
+        }
+    }
 }
