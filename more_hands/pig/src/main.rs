@@ -135,13 +135,7 @@ fn player(
                 clear_die(&hand_query, &mut commands);
                 state.set(GamePhase::Cpu);
             } else {
-                spawn_die(
-                    &hand_query,
-                    &mut commands,
-                    &assets,
-                    new_roll as usize,
-                    Color::WHITE,
-                );
+                spawn_die(&hand_query, &mut commands, &assets, new_roll, Color::WHITE);
             }
         }
 
@@ -184,7 +178,7 @@ fn cpu(
                     &hand_query,
                     &mut commands,
                     &assets,
-                    new_roll as usize,
+                    new_roll,
                     Color::Srgba(Srgba::new(0.0, 0.0, 1.0, 1.0)),
                 );
             }
