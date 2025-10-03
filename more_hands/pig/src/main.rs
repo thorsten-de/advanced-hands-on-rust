@@ -169,7 +169,7 @@ fn cpu(
             .sum();
 
         if hand_total < 20 && scores.cpu + hand_total < 100 {
-            let new_roll = rng.0.range(1..7);
+            let new_roll = rng.0.range(1..=6);
             if new_roll == 1 {
                 clear_die(&hand_query, &mut commands);
                 state.set(GamePhase::Player);
