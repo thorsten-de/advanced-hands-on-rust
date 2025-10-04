@@ -1,5 +1,6 @@
 {
   "accentColor": "#9e6400",
   "showViewHeader": true,
-  "showRibbon": true
+  "showRibbon": true,
+  "theme": "moonstone"
 }
