@@ -14,6 +14,7 @@ type RngCore = rand_xorshift::XorShiftRng;
 #[cfg(feature = "pcg")]
 type RngCore = rand_pcg::Pcg64Mcg;
 
+#[derive(bevy::prelude::Resource)]
 pub struct RandomNumberGenerator {
     rng: RngCore,
 }
@@ -98,5 +99,12 @@ mod test {
             assert!(n > -5000.0);
             assert!(n < 5000.0);
         }
+    }
+}
+
+pub struct RandomPlugin;
+impl bevy::prelude::Plugin for RandomPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.insert_resource(RandomNumberGenerator::new());
     }
 }

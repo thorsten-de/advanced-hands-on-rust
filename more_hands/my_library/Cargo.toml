@@ -7,6 +7,7 @@ edition = "2024"
 rand = "0.9"
 rand_pcg = { version = "0.9", optional = true }
 rand_xorshift = { version = "0.4", optional = true }
+bevy = { workspace = true }
 
 [features]
 default = ["pcg"]
