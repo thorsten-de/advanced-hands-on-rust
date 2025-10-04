@@ -5,9 +5,15 @@ edition = "2024"
 
 [dependencies]
 rand = "0.9"
+rand_pcg = { version = "0.9", optional = true }
+rand_xorshift = { version = "0.4", optional = true }
+
+[features]
+default = ["pcg"]
+pcg = ["rand_pcg"]
+xorshift = ["rand_xorshift"]
 
 [dev-dependencies]
-
 criterion = { version = "0.7", features = ["html_reports"] }
 
 [[bench]]

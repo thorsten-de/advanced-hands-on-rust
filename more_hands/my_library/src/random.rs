@@ -4,22 +4,29 @@ use rand::{
         Distribution, StandardUniform,
         uniform::{SampleRange, SampleUniform},
     },
-    prelude::StdRng,
 };
+#[cfg(all(not(feature = "xorshift"), not(feature = "pcg")))]
+type RngCore = rand::prelude::StdRng;
+
+#[cfg(feature = "xorshift")]
+type RngCore = rand_xorshift::XorShiftRng;
+
+#[cfg(feature = "pcg")]
+type RngCore = rand_pcg::Pcg64Mcg;
 
 pub struct RandomNumberGenerator {
-    rng: StdRng,
+    rng: RngCore,
 }
 
 impl RandomNumberGenerator {
     pub fn new() -> Self {
         Self {
-            rng: StdRng::from_os_rng(),
+            rng: RngCore::from_os_rng(),
         }
     }
     pub fn seeded(seed: u64) -> Self {
         Self {
-            rng: StdRng::seed_from_u64(seed),
+            rng: RngCore::seed_from_u64(seed),
         }
     }
 
