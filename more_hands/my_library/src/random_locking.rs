@@ -17,6 +17,24 @@ type RngCore = rand_xorshift::XorShiftRng;
 type RngCore = rand_pcg::Pcg64Mcg;
 
 #[derive(bevy::prelude::Resource)]
+/// `RandomNumberGenerator` holds random number generation state and offers
+/// random number generation services to your program.
+///
+/// `RandomNumberGenerator` defaults to using the [PCG](https://crates.io/crates/rand_pcg) algorithm.
+/// You can specify `xorshift` as a feature flag to use it instead.
+///
+/// By default, `RandomNumberGenerator` requires mutability--- it is shared in Bevy with
+/// `ResMut<RandomNumberGenerator`. If you prefer interior mutability instead
+/// (and use `Res<RandomNumberGenerator>`), specify the `locking` feature flag.
+///
+/// ## Example
+///
+/// ```
+/// use my_library::RandomNumberGenerator;
+/// let mut my_rng = RandomNumberGenerator::new();
+/// let random_number = my_rng.range(1..10);
+/// println!("{random_number}")
+/// ```
 pub struct RandomNumberGenerator {
     rng: Mutex<RngCore>,
 }
@@ -62,7 +80,7 @@ mod test {
 
     #[test]
     fn test_range_bounds() {
-        let mut rng = RandomNumberGenerator::new();
+        let rng = RandomNumberGenerator::new();
 
         for _ in 0..1000 {
             let n = rng.range(1..10);
@@ -73,7 +91,7 @@ mod test {
 
     #[test]
     fn test_reproducibility() {
-        let mut rng = (
+        let rng = (
             RandomNumberGenerator::seeded(1),
             RandomNumberGenerator::seeded(1),
         );
@@ -88,14 +106,14 @@ mod test {
 
     #[test]
     fn test_next_types() {
-        let mut rng = RandomNumberGenerator::new();
+        let rng = RandomNumberGenerator::new();
         let _: i32 = rng.next();
         let _ = rng.next::<f32>();
     }
 
     #[test]
     fn test_float() {
-        let mut rng = RandomNumberGenerator::new();
+        let rng = RandomNumberGenerator::new();
 
         for _ in 0..1000 {
             let n: f32 = rng.range(-5000.0..5000.0);

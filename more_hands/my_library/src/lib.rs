@@ -22,6 +22,9 @@
 //!     - `xorshift` to use the XorShift algorithm
 //!     - `pcg` to use the PCG algorithm
 
+#![warn(missing_docs)]
+/// [`RandomNumberGenerator`] wraps the `rand` crate. The `rand` crate
+/// is re-exported for your convenience
 pub use rand;
 
 #[cfg(not(feature = "locking"))]

@@ -14,6 +14,24 @@ type RngCore = rand_xorshift::XorShiftRng;
 #[cfg(feature = "pcg")]
 type RngCore = rand_pcg::Pcg64Mcg;
 
+/// `RandomNumberGenerator` holds random number generation state and offers
+/// random number generation services to your program.
+///
+/// `RandomNumberGenerator` defaults to using the [PCG](https://crates.io/crates/rand_pcg) algorithm.
+/// You can specify `xorshift` as a feature flag to use it instead.
+///
+/// By default, `RandomNumberGenerator` requires mutability--- it is shared in Bevy with
+/// `ResMut<RandomNumberGenerator`. If you prefer interior mutability instead
+/// (and use `Res<RandomNumberGenerator>`), specify the `locking` feature flag.
+///
+/// ## Example
+///
+/// ```
+/// use my_library::RandomNumberGenerator;
+/// let mut my_rng = RandomNumberGenerator::new();
+/// let random_number = my_rng.range(1..10);
+/// println!("{random_number}")
+/// ```
 #[derive(bevy::prelude::Resource)]
 pub struct RandomNumberGenerator {
     rng: RngCore,
