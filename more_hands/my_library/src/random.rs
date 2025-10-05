@@ -38,17 +38,50 @@ pub struct RandomNumberGenerator {
 }
 
 impl RandomNumberGenerator {
+    /// Creates a default `RandomNumberGenerator`, with a randomly
+    /// selected starting seed
     pub fn new() -> Self {
         Self {
             rng: RngCore::from_os_rng(),
         }
     }
+    /// Creates a `RandomNumberGenerator` with a specified random seed.
+    /// Given the same requests, it will produce the *same results* each time.
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - the random seed to use.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use my_library::RandomNumberGenerator;
+    /// let mut rng1 = RandomNumberGenerator::seeded(1);
+    /// let mut rng2 = RandomNumberGenerator::seeded(1);
+    /// let results: (u32, u32) = ( rng1.next(), rng2.next());
+    /// assert_eq!(results.0, results.1);
+    /// ```
     pub fn seeded(seed: u64) -> Self {
         Self {
             rng: RngCore::seed_from_u64(seed),
         }
     }
 
+    /// Generates a random number within a specified range.
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - the range (inclusive or exclusive) within which to
+    /// generate a random number
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use my_library::RandomNumberGenerator;
+    /// let mut rng = RandomNumberGenerator::new();
+    /// let one_to_nine = rng.range(1..10);
+    /// let one_to_ten = rng.range(1..=10);    ///
+    /// ```
     pub fn range<T>(&mut self, range: impl SampleRange<T>) -> T
     where
         T: SampleUniform + PartialOrd,
@@ -56,6 +89,7 @@ impl RandomNumberGenerator {
         self.rng.random_range(range)
     }
 
+    /// Generates a new random number of the requested type.
     pub fn next<T>(&mut self) -> T
     where
         StandardUniform: Distribution<T>,
@@ -120,6 +154,12 @@ mod test {
     }
 }
 
+/// `Random` is a Bevy plugin that inserts a `RandomNumberGenerator`
+/// Resource into your application.
+///
+/// Once you add the plugin (with `App::new().add_plugin("RandomPlugin")`),
+/// you can access a random number generator in all systems with
+/// `rng: ResMut<RandomNumberGenerator>`
 pub struct RandomPlugin;
 impl bevy::prelude::Plugin for RandomPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
