@@ -43,6 +43,12 @@ impl AssetManager {
     }
 }
 
+impl Plugin for AssetManager {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(self.clone());
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

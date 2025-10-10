@@ -31,7 +31,7 @@ enum GamePhase {
     GameOver,
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let mut app = App::new();
 
     add_phase!(app, GamePhase, GamePhase::Flapping,
@@ -55,7 +55,14 @@ fn main() {
         GamePhase::Flapping,
         GamePhase::GameOver,
     ))
+    .add_plugins(
+        AssetManager::new()
+            .add_image("dragon", "flappy_dragon.png")?
+            .add_image("wall", "wall.png")?,
+    )
     .run();
+
+    Ok(())
 }
 
 fn setup(
