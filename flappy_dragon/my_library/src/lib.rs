@@ -23,6 +23,10 @@
 //!     - `pcg` to use the PCG algorithm
 
 #![warn(missing_docs)]
+
+mod bevy_framework;
+pub use bevy_framework::*;
+
 /// [`RandomNumberGenerator`] wraps the `rand` crate. The `rand` crate
 /// is re-exported for your convenience
 pub use rand;
