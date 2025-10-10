@@ -1,3 +1,5 @@
+use std::default;
+
 use bevy::{app::AppExit, prelude::*};
 use my_library::*;
 
@@ -17,6 +19,14 @@ struct Assets {
     wall: Handle<Image>,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Default, States)]
+enum GamePhase {
+    MainMenu,
+    #[default]
+    Flapping,
+    GameOver,
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -29,6 +39,11 @@ fn main() {
             ..default()
         }))
         .add_plugins(RandomPlugin) //(6)
+        .add_plugins(GameStatePlugin::<GamePhase>::new(
+            GamePhase::MainMenu,
+            GamePhase::Flapping,
+            GamePhase::GameOver,
+        ))
         .add_systems(Startup, setup)
         .add_systems(Update, gravity)
         .add_systems(Update, flap)
