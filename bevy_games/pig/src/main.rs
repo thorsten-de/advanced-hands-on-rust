@@ -1,13 +1,20 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowResolution};
 use bevy_egui::{EguiContexts, EguiPlugin, egui};
 use my_library::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Default, States)]
 enum GamePhase {
     #[default]
+    MainMenu,
+    Start,
     Player,
     Cpu,
+    End,
+    GameOver,
 }
+
+#[derive(Component)]
+pub struct GameElement;
 
 #[derive(Resource)]
 /// This holds the handle the dice graphics. It represents an index to the
@@ -32,19 +39,60 @@ struct HandDie;
 #[derive(Resource)]
 struct HandTImer(Timer);
 
+#[derive(Resource)]
+struct FinalScore(Scores);
+
 fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(EguiPlugin {
-            enable_multipass_for_primary_context: false,
-        })
-        .add_plugins(RandomPlugin)
-        .add_systems(Startup, setup)
-        .init_state::<GamePhase>()
-        .add_systems(Update, display_score)
-        .add_systems(Update, player.run_if(in_state(GamePhase::Player)))
-        .add_systems(Update, cpu.run_if(in_state(GamePhase::Cpu)))
-        .run();
+    let mut app = App::new();
+
+    add_phase!(app, GamePhase, GamePhase::Start,
+        start => [setup ],
+        run => [start_game],
+        exit => []
+    );
+
+    add_phase!(app, GamePhase, GamePhase::Player,
+        start => [],
+        run => [player, check_game_over, display_score],
+        exit => []
+    );
+
+    add_phase!(app, GamePhase, GamePhase::Cpu,
+        start => [],
+        run => [cpu, check_game_over, display_score],
+        exit => []
+    );
+
+    add_phase!(app, GamePhase, GamePhase::End,
+        start => [],
+        run => [end_game],
+        exit => [cleanup::<GameElement>]
+    );
+
+    add_phase!(app, GamePhase, GamePhase::GameOver,
+        start => [],
+        run => [display_final_score],
+        exit => []
+    );
+
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "Pig".to_string(),
+            resolution: WindowResolution::new(1024.0, 768.0),
+            ..default()
+        }),
+        ..default()
+    }))
+    .add_plugins(EguiPlugin {
+        enable_multipass_for_primary_context: false,
+    })
+    .add_plugins(GameStatePlugin::new(
+        GamePhase::MainMenu,
+        GamePhase::Start,
+        GamePhase::GameOver,
+    ))
+    .add_plugins(RandomPlugin)
+    .run();
 }
 
 fn setup(
@@ -52,7 +100,7 @@ fn setup(
     mut commands: Commands,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    commands.spawn(Camera2d::default());
+    commands.spawn(Camera2d::default()).insert(GameElement);
 
     // Load dice asset, define a grid of 6 images in a row with 52 pixels in size
     let texture = asset_server.load("dice.png");
@@ -98,7 +146,35 @@ fn spawn_die(
         sprite,
         Transform::from_xyz(rolled_die - 400.0, 60.0, 1.0),
         HandDie,
+        GameElement,
     ));
+}
+
+fn start_game(mut state: ResMut<NextState<GamePhase>>) {
+    state.set(GamePhase::Player);
+}
+
+fn end_game(mut state: ResMut<NextState<GamePhase>>, scores: Res<Scores>, mut commands: Commands) {
+    commands.insert_resource(FinalScore(*scores));
+    state.set(GamePhase::GameOver);
+}
+
+fn check_game_over(mut state: ResMut<NextState<GamePhase>>, scores: Res<Scores>) {
+    if scores.cpu >= 100 || scores.player >= 100 {
+        state.set(GamePhase::End);
+    }
+}
+
+fn display_final_score(scores: Res<FinalScore>, mut egui_context: EguiContexts) {
+    egui::Window::new("Total Scores").show(egui_context.ctx_mut(), |ui| {
+        ui.label(&format!("Player: {}", scores.0.player));
+        ui.label(&format!("CPU: {}", scores.0.cpu));
+        if (scores.0.player < scores.0.cpu) {
+            ui.label("CPU is the winner!");
+        } else {
+            ui.label("Player is the winner!");
+        }
+    });
 }
 
 fn clear_die(hand_query: &Query<(Entity, &Sprite), With<HandDie>>, commands: &mut Commands) {
