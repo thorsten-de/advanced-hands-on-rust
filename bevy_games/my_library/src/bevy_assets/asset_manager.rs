@@ -1,4 +1,6 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
+
+use crate::AssetStore;
 
 /// Supported asset types
 #[derive(Clone, PartialEq, Debug)]
@@ -45,8 +47,33 @@ impl AssetManager {
 
 impl Plugin for AssetManager {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.clone());
+        app.insert_resource(self.clone())
+            .add_systems(Startup, setup);
     }
+}
+
+fn setup(
+    asset_resource: Res<AssetManager>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let mut assets = AssetStore {
+        asset_index: HashMap::new(),
+    };
+
+    asset_resource
+        .asset_list
+        .iter()
+        .for_each(|(tag, filename, asset_type)| match asset_type {
+            _ => {
+                assets
+                    .asset_index
+                    .insert(tag.clone(), asset_server.load_untyped(filename));
+            }
+        });
+
+    commands.remove_resource::<AssetManager>();
+    commands.insert_resource(assets);
 }
 
 #[cfg(test)]
