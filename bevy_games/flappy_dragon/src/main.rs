@@ -65,12 +65,18 @@ fn setup(
     mut rng: ResMut<RandomNumberGenerator>, //(7)
 ) {
     commands.spawn(Camera2d::default()).insert(FlappyElement); //(9)
-    commands.spawn((
-        Sprite::from_image(assets.get_handle("dragon", &loaded_assets).unwrap()), //(10)
-        Transform::from_xyz(-490.0, 0.0, 1.0),                                    //(11)
+
+    spawn_image!(
+        assets,
+        commands,
+        "dragon",
+        -490.0,
+        0.0,
+        1.0,
+        &loaded_assets,
         Flappy { gravity: 0.0 },
-        FlappyElement,
-    ));
+        FlappyElement
+    );
 
     build_wall(&mut commands, &assets, &loaded_assets, rng.range(-5..5)); //(12)
 }
@@ -84,13 +90,18 @@ fn build_wall(
     for y in -12..=12 {
         //(14)
         if y < gap_y - 4 || y > gap_y + 4 {
-            //(15)
-            commands.spawn((
-                Sprite::from_image(assets.get_handle("wall", &loaded_assets).unwrap()),
-                Transform::from_xyz(512.0, y as f32 * 32.0, 1.0),
+            spawn_image!(
+                assets,
+                commands,
+                "wall",
+                512.0,
+                y as f32 * 32.0,
+                1.0,
+                &loaded_assets,
                 Obstacle,
-                FlappyElement,
-            ));
+                FlappyElement
+            );
+            //(15)
         }
     }
 }
