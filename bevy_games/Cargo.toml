@@ -1,12 +1,13 @@
 [package]
-name = "flappy_dragon"
+name = "bevy_games_workspace"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 
 [workspace]
-members = ["flappy_dragon_base", "my_library"]
+members = ["flappy_dragon", "pig", "hello_bevy", "my_library"]
 
 [workspace.dependencies]
 bevy = "0.16"
+bevy_egui = "0.34.1"
