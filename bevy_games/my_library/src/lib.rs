@@ -43,3 +43,8 @@ pub use random_locking::*;
 
 mod bevy_assets;
 pub use bevy_assets::*;
+
+/// Wraps the `anyhow`-crate for error handling
+pub mod anyhow {
+    pub use anyhow::*;
+}
