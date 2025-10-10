@@ -1,6 +1,7 @@
 //! The `bevy_framework` module provides a framework for game state managing
 
 mod game_menus;
+use crate::add_phase;
 use bevy::{prelude::*, state::state::FreelyMutableState};
 
 /// This plugin provides game state handling. It requires an enumeration of
@@ -41,22 +42,15 @@ impl<T: States + Copy + FromWorld + FreelyMutableState> Plugin for GameStatePlug
         };
         app.insert_resource(start);
 
-        app.add_systems(OnEnter(self.menu_state), game_menus::setup::<T>);
-        app.add_systems(
-            Update,
-            game_menus::run::<T>.run_if(in_state(self.menu_state)),
-        );
-        app.add_systems(OnExit(self.menu_state), cleanup::<game_menus::MenuElement>);
+        add_phase!(app, T, self.menu_state,
+            start => [ game_menus::setup::<T> ],
+            run => [ game_menus::run::<T> ],
+            exit => [ cleanup::<game_menus::MenuElement> ]);
 
-        app.add_systems(OnEnter(self.game_end_state), game_menus::setup::<T>);
-        app.add_systems(
-            Update,
-            game_menus::run::<T>.run_if(in_state(self.game_end_state)),
-        );
-        app.add_systems(
-            OnExit(self.game_end_state),
-            cleanup::<game_menus::MenuElement>,
-        );
+        add_phase!(app, T, self.game_end_state,
+            start => [ game_menus::setup::<T> ],
+            run => [ game_menus::run::<T> ],
+            exit => [ cleanup::<game_menus::MenuElement> ]);
     }
 }
 
@@ -91,4 +85,20 @@ pub(crate) struct MenuResource<T> {
     pub(crate) menu_state: T,
     pub(crate) game_start_state: T,
     pub(crate) game_end_state: T,
+}
+
+/// The `add_phase!`-macro lets you specify which systems are used for a
+/// sepcific game phase.
+#[macro_export]
+macro_rules! add_phase {
+    (
+        $app:expr, $type:ty, $phase:expr,
+        start => [ $($start:expr),*],
+        run => [ $($run:expr),*],
+        exit => [ $($exit:expr),*]
+    ) => {
+        $($app.add_systems(bevy::prelude::OnEnter::<$type>($phase), $start);)*
+        $($app.add_systems(bevy::prelude::OnExit::<$type>($phase), $exit);)*
+        $($app.add_systems(bevy::prelude::Update, $run.run_if(in_state($phase)));)*
+    };
 }
