@@ -40,3 +40,6 @@ pub use random::*;
 mod random_locking;
 #[cfg(feature = "locking")]
 pub use random_locking::*;
+
+mod bevy_assets;
+pub use bevy_assets::*;
