@@ -34,3 +34,15 @@ impl<T: States + FromWorld + FreelyMutableState> Plugin for GameStatePlugin<T> {
         app.init_state::<T>();
     }
 }
+
+/// Cleans up all entities spawned with a given component. If all entities of a given
+/// game state `x` are tagged with a common component `XElement`, the state can be
+/// cleaned up by `cleanup::<XElement>`  
+pub fn cleanup<T>(query: Query<Entity, With<T>>, mut commands: Commands)
+where
+    T: Component,
+{
+    query
+        .iter()
+        .for_each(|entity| commands.entity(entity).despawn())
+}

@@ -12,6 +12,7 @@ struct Flappy {
 #[derive(Component)]
 struct Obstacle; //(3)
 
+/// Marker component denoting all entities spawned inside GamePhase::Flapping
 #[derive(Component)]
 struct FlappyElement;
 
@@ -52,6 +53,7 @@ fn main() {
             Update,
             (gravity, flap, clamp, move_walls, hit_wall).run_if(in_state(GamePhase::Flapping)),
         )
+        .add_systems(OnExit(GamePhase::Flapping), cleanup::<FlappyElement>)
         .run();
 }
 
