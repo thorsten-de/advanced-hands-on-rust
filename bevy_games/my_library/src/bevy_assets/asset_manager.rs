@@ -1,4 +1,4 @@
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::{asset::io::file, platform::collections::HashMap, prelude::*};
 
 use crate::AssetStore;
 
@@ -6,6 +6,7 @@ use crate::AssetStore;
 #[derive(Clone, PartialEq, Debug)]
 pub enum AssetType {
     Image,
+    Sound,
 }
 
 /// The bevy resource to manages assets.
@@ -36,24 +37,34 @@ impl AssetManager {
     /// Adds an image to the asset manager
     pub fn add_image<S: ToString>(mut self, tag: S, filename: S) -> anyhow::Result<Self> {
         let filename = filename.to_string();
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let current_directory = std::env::current_dir()?;
-            let assets = current_directory.join("assets");
-            let new_image = assets.join(&filename);
-            if !new_image.exists() {
-                return Err(anyhow::Error::msg(format!(
-                    "{} not found in assets directory",
-                    &filename
-                )));
-            }
-        }
+        Self::asset_exists(&filename)?;
 
         self.asset_list
             .push((tag.to_string(), filename, AssetType::Image));
-
         Ok(self)
+    }
+
+    /// Adds a sound to the asset manager
+    pub fn add_sound<S: ToString>(mut self, tag: S, filename: S) -> anyhow::Result<Self> {
+        let filename = filename.to_string();
+        Self::asset_exists(&filename)?;
+
+        self.asset_list
+            .push((tag.to_string(), filename, AssetType::Sound));
+        Ok(self)
+    }
+
+    fn asset_exists(filename: &String) -> Result<(), anyhow::Error> {
+        let current_directory = std::env::current_dir()?;
+        let assets = current_directory.join("assets");
+        let new_image = assets.join(filename);
+        if !new_image.exists() {
+            return Err(anyhow::Error::msg(format!(
+                "{} not found in assets directory",
+                &filename
+            )));
+        }
+        Ok(())
     }
 }
 

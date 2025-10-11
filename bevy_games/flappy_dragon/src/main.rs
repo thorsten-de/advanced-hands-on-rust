@@ -52,7 +52,9 @@ fn main() -> anyhow::Result<()> {
     .add_plugins(
         AssetManager::new()
             .add_image("dragon", "flappy_dragon.png")?
-            .add_image("wall", "wall.png")?,
+            .add_image("wall", "wall.png")?
+            .add_sound("flap", "dragonflap.ogg")?
+            .add_sound("crash", "crash.ogg")?,
     )
     .run();
 
@@ -115,10 +117,17 @@ fn gravity(mut query: Query<(&mut Flappy, &mut Transform)>) {
     }
 }
 
-fn flap(keyboard: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Flappy>) {
+fn flap(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut query: Query<&mut Flappy>,
+    assets: Res<AssetStore>,
+    loaded_assets: Res<LoadedAssets>,
+    mut commands: Commands,
+) {
     if keyboard.pressed(KeyCode::Space) {
         if let Ok(mut flappy) = query.single_mut() {
             flappy.gravity = -5.0; //(19)
+            assets.play("flap", &mut commands, &loaded_assets);
         }
     }
 }
@@ -160,6 +169,9 @@ fn hit_wall(
     player: Query<&Transform, With<Flappy>>,  //(24)
     walls: Query<&Transform, With<Obstacle>>, //(25)
     mut state: ResMut<NextState<GamePhase>>,
+    assets: Res<AssetStore>,
+    loaded_assets: Res<LoadedAssets>,
+    mut commands: Commands,
 ) {
     if let Ok(player) = player.single() {
         //(26)
@@ -168,6 +180,7 @@ fn hit_wall(
             let distance = player.translation.distance(wall.translation); //(28)
             if distance < 32.0 {
                 state.set(GamePhase::GameOver);
+                assets.play("crash", &mut commands, &loaded_assets);
             }
         }
     }
