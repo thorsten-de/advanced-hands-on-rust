@@ -3431,6 +3431,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bevy",
+ "bevy_egui",
  "criterion",
  "rand 0.9.2",
  "rand_pcg",

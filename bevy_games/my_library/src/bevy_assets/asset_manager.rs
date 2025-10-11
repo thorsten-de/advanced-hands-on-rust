@@ -18,10 +18,22 @@ impl AssetManager {
     /// Creates a new asset manager resource
     pub fn new() -> Self {
         Self {
-            asset_list: Vec::new(),
+            asset_list: vec![
+                (
+                    "main_menu".to_string(),
+                    "main_menu.png".to_string(),
+                    AssetType::Image,
+                ),
+                (
+                    "game_over".to_string(),
+                    "game_over.png".to_string(),
+                    AssetType::Image,
+                ),
+            ],
         }
     }
 
+    /// Adds an image to the asset manager
     pub fn add_image<S: ToString>(mut self, tag: S, filename: S) -> anyhow::Result<Self> {
         let filename = filename.to_string();
 
@@ -47,16 +59,15 @@ impl AssetManager {
 
 impl Plugin for AssetManager {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.clone())
-            .add_systems(Startup, setup);
+        app.insert_resource(self.clone());
     }
 }
 
-fn setup(
-    asset_resource: Res<AssetManager>,
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+pub(crate) fn setup_asset_store(
+    asset_resource: &AssetManager,
+    mut commands: &mut Commands,
+    asset_server: &AssetServer,
+) -> AssetStore {
     let mut assets = AssetStore {
         asset_index: HashMap::new(),
     };
@@ -71,9 +82,9 @@ fn setup(
                     .insert(tag.clone(), asset_server.load_untyped(filename));
             }
         });
-
     commands.remove_resource::<AssetManager>();
-    commands.insert_resource(assets);
+    commands.insert_resource(assets.clone());
+    assets
 }
 
 #[cfg(test)]

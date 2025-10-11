@@ -19,6 +19,7 @@ struct FlappyElement;
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Default, States)]
 enum GamePhase {
     #[default]
+    Loading,
     MainMenu,
     Flapping,
     GameOver,
