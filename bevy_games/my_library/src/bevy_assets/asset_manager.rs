@@ -1,4 +1,4 @@
-use bevy::{asset::io::file, platform::collections::HashMap, prelude::*};
+use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::AssetStore;
 
@@ -76,7 +76,7 @@ impl Plugin for AssetManager {
 
 pub(crate) fn setup_asset_store(
     asset_resource: &AssetManager,
-    mut commands: &mut Commands,
+    commands: &mut Commands,
     asset_server: &AssetServer,
 ) -> AssetStore {
     let mut assets = AssetStore {

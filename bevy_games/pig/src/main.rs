@@ -169,7 +169,7 @@ fn display_final_score(scores: Res<FinalScore>, mut egui_context: EguiContexts) 
     egui::Window::new("Total Scores").show(egui_context.ctx_mut(), |ui| {
         ui.label(&format!("Player: {}", scores.0.player));
         ui.label(&format!("CPU: {}", scores.0.cpu));
-        if (scores.0.player < scores.0.cpu) {
+        if scores.0.player < scores.0.cpu {
             ui.label("CPU is the winner!");
         } else {
             ui.label("Player is the winner!");

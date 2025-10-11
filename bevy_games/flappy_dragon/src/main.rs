@@ -1,6 +1,4 @@
-use std::default;
-
-use bevy::{app::AppExit, prelude::*};
+use bevy::prelude::*;
 use my_library::*;
 
 #[derive(Component)]

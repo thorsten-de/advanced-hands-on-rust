@@ -6,7 +6,10 @@ use bevy::{
 
 // Create aliases for some frequently used types, and protect against
 // changes in bevy
+/// Untyped loaded assets
 pub type LoadedAssets = Assets<LoadedUntypedAsset>;
+
+/// Resource of loaded assets
 pub type AssetResource<'w> = Res<'w, LoadedAssets>;
 
 /// Stores the handles for resources defined by the `AssetManager`
@@ -35,6 +38,6 @@ impl AssetStore {
     pub fn play(&self, sound_name: &str, commands: &mut Commands, assets: &LoadedAssets) {
         let sound_handle: Handle<AudioSource> = self.get_handle(sound_name, assets).unwrap();
 
-        commands.spawn((AudioPlayer::new(sound_handle.clone())));
+        commands.spawn(AudioPlayer::new(sound_handle.clone()));
     }
 }

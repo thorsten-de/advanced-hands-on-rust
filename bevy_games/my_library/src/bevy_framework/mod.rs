@@ -76,12 +76,6 @@ where
 }
 
 #[derive(Resource)]
-pub(crate) struct MenuAssets {
-    pub(crate) main_menu: Handle<Image>,
-    pub(crate) game_over: Handle<Image>,
-}
-
-#[derive(Resource)]
 pub(crate) struct MenuResource<T> {
     pub(crate) menu_state: T,
     pub(crate) game_start_state: T,
