@@ -7,6 +7,15 @@ use crate::AssetStore;
 pub enum AssetType {
     Image,
     Sound,
+    /// Defines a set of frames (sub-images) on an image
+    SpriteSheet {
+        /// The frame size (x, y)
+        tile_size: Vec2,
+        /// number of columns
+        sprites_x: usize,
+        /// number of rows
+        sprites_y: usize,
+    },
 }
 
 /// The bevy resource to manages assets.
@@ -54,6 +63,32 @@ impl AssetManager {
         Ok(self)
     }
 
+    /// Adds a sprite sheet to the asset manager
+    pub fn add_sprite_sheet<S: ToString>(
+        mut self,
+        tag: S,
+        filename: S,
+        sprite_width: f32,
+        sprite_height: f32,
+        sprites_x: usize,
+        sprites_y: usize,
+    ) -> anyhow::Result<Self> {
+        let filename = filename.to_string();
+        Self::asset_exists(&filename)?;
+
+        self.asset_list.push((
+            tag.to_string(),
+            filename,
+            AssetType::SpriteSheet {
+                tile_size: Vec2::new(sprite_width, sprite_height),
+                sprites_x,
+                sprites_y,
+            },
+        ));
+
+        Ok(self)
+    }
+
     fn asset_exists(filename: &String) -> Result<(), anyhow::Error> {
         let current_directory = std::env::current_dir()?;
         let assets = current_directory.join("assets");
@@ -81,12 +116,33 @@ pub(crate) fn setup_asset_store(
 ) -> AssetStore {
     let mut assets = AssetStore {
         asset_index: HashMap::new(),
+        atlases: HashMap::new(),
+        atlases_to_build: Vec::new(),
     };
 
     asset_resource
         .asset_list
         .iter()
         .for_each(|(tag, filename, asset_type)| match asset_type {
+            AssetType::SpriteSheet {
+                tile_size,
+                sprites_x,
+                sprites_y,
+            } => {
+                // Load the underlying image and place it under a special tag
+                let image_handle = asset_server.load_untyped(filename);
+                let base_tag = format!("{tag}_base");
+                assets.asset_index.insert(base_tag.clone(), image_handle);
+
+                // Add atlas details with the original tag
+                assets.atlases_to_build.push(crate::FutureAtlas {
+                    tag: tag.clone(),
+                    texture_tag: base_tag,
+                    tile_size: *tile_size,
+                    sprites_x: *sprites_x,
+                    sprites_y: *sprites_y,
+                });
+            }
             _ => {
                 assets
                     .asset_index

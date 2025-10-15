@@ -16,6 +16,8 @@ pub type AssetResource<'w> = Res<'w, LoadedAssets>;
 #[derive(Resource, Clone)]
 pub struct AssetStore {
     pub(crate) asset_index: HashMap<String, Handle<LoadedUntypedAsset>>,
+    pub(crate) atlases_to_build: Vec<FutureAtlas>,
+    pub(crate) atlases: HashMap<String, (Handle<Image>, Handle<TextureAtlasLayout>)>,
 }
 
 impl AssetStore {
@@ -46,4 +48,24 @@ impl AssetStore {
             },
         ));
     }
+
+    /// Returns a handle to both the sprite image and the atlas layout
+    pub fn get_atlas_handle(
+        &self,
+        index: &str,
+    ) -> Option<(Handle<Image>, Handle<TextureAtlasLayout>)> {
+        if let Some(handle) = self.atlases.get(index) {
+            return Some(handle.clone());
+        }
+        None
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct FutureAtlas {
+    pub(crate) tag: String,
+    pub(crate) texture_tag: String,
+    pub(crate) tile_size: Vec2,
+    pub(crate) sprites_x: usize,
+    pub(crate) sprites_y: usize,
 }
