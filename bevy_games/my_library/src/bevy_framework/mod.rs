@@ -4,6 +4,9 @@ mod game_menus;
 use crate::add_phase;
 use bevy::{prelude::*, state::state::FreelyMutableState};
 
+mod bevy_animation;
+pub use bevy_animation::*;
+
 /// This plugin provides game state handling. It requires an enumeration of
 /// known game states.
 ///
