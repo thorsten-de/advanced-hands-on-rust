@@ -7,6 +7,9 @@ use bevy::{prelude::*, state::state::FreelyMutableState};
 mod bevy_animation;
 pub use bevy_animation::*;
 
+mod bevy_physics;
+pub use bevy_physics::*;
+
 /// This plugin provides game state handling. It requires an enumeration of
 /// known game states.
 ///
@@ -37,6 +40,8 @@ impl<T> GameStatePlugin<T> {
 impl<T: States + Copy + FromWorld + FreelyMutableState + Default> Plugin for GameStatePlugin<T> {
     fn build(&self, app: &mut bevy::app::App) {
         app.init_state::<T>();
+        app.add_event::<PhysicsTick>().add_event::<Impulse>();
+
         app.add_plugins(bevy_egui::EguiPlugin {
             enable_multipass_for_primary_context: false,
         });
