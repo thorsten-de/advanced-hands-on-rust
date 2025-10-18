@@ -1,4 +1,4 @@
-use bevy::{ecs::entity::FromEntitySetIterator, prelude::*};
+use bevy::prelude::*;
 use my_library::*;
 
 #[derive(Component)]
@@ -28,7 +28,7 @@ fn main() -> anyhow::Result<()> {
 
     add_phase!(app, GamePhase, GamePhase::Flapping,
         start => [ setup ],
-        run => [ gravity, flap, clamp, move_walls, hit_wall, cycle_animations ],
+        run => [ gravity, flap, clamp, move_walls, hit_wall, cycle_animations, continual_parallax ],
         exit => [ cleanup::<FlappyElement> ]
     );
 
@@ -53,7 +53,11 @@ fn main() -> anyhow::Result<()> {
             .add_image("wall", "wall.png")?
             .add_sound("flap", "dragonflap.ogg")?
             .add_sound("crash", "crash.ogg")?
-            .add_sprite_sheet("flappy", "flappy_sprite_sheet.png", 62.0, 65.0, 4, 1)?,
+            .add_sprite_sheet("flappy", "flappy_sprite_sheet.png", 62.0, 65.0, 4, 1)?
+            .add_image("bg_static", "rocky-far-mountains.png")?
+            .add_image("bg_far", "rocky-nowater-far.png")?
+            .add_image("bg_mid", "rocky-nowater-mid.png")?
+            .add_image("bg_close", "rocky-nowater-close.png")?,
     )
     .insert_resource(
         Animations::new()
@@ -108,11 +112,93 @@ fn setup(
         "flappy",
         -490.0,
         0.0,
-        10.0,
+        10.0, // higher z-level for placing flappy above the parallax backgrounds
         "Straight and Level",
         Flappy { gravity: 0.0 },
         FlappyElement
     );
+
+    let width = 1280.0;
+    spawn_image!(
+        assets,
+        commands,
+        "bg_static",
+        0.0,
+        0.0,
+        1.0, // static background layer
+        &loaded_assets,
+        FlappyElement
+    );
+
+    spawn_image!(
+        assets,
+        commands,
+        "bg_far",
+        0.0,
+        0.0,
+        2.0, // second parallax layer
+        &loaded_assets,
+        FlappyElement,
+        ContinualParallax::new(width, 66, Vec2::new(1.0, 0.0))
+    );
+    spawn_image!(
+        assets,
+        commands,
+        "bg_far",
+        width,
+        0.0,
+        2.0, // second parallax layer
+        &loaded_assets,
+        FlappyElement,
+        ContinualParallax::new(width, 66, Vec2::new(1.0, 0.0))
+    );
+
+    spawn_image!(
+        assets,
+        commands,
+        "bg_mid",
+        0.0,
+        0.0,
+        3.0, // third parallax layer
+        &loaded_assets,
+        FlappyElement,
+        ContinualParallax::new(width, 33, Vec2::new(1.0, 0.0))
+    );
+    spawn_image!(
+        assets,
+        commands,
+        "bg_mid",
+        width,
+        0.0,
+        3.0, // third parallax layer
+        &loaded_assets,
+        FlappyElement,
+        ContinualParallax::new(width, 33, Vec2::new(1.0, 0.0))
+    );
+
+    spawn_image!(
+        assets,
+        commands,
+        "bg_close",
+        0.0,
+        0.0,
+        4.0, // fourth parallax layer
+        &loaded_assets,
+        FlappyElement,
+        ContinualParallax::new(width, 16, Vec2::new(2.0, 0.0))
+    );
+    spawn_image!(
+        assets,
+        commands,
+        "bg_close",
+        width,
+        0.0,
+        4.0, // fourth parallax layer
+        &loaded_assets,
+        FlappyElement,
+        ContinualParallax::new(width, 16, Vec2::new(2.0, 0.0))
+    );
+
     /*
     let Some((img, atlas)) = assets.get_atlas_handle("flappy") else {
         panic!()
@@ -150,7 +236,7 @@ fn build_wall(
                 "wall",
                 512.0,
                 y as f32 * 32.0,
-                1.0,
+                10.0, // draw above the parallax backgrounds
                 &loaded_assets,
                 Obstacle,
                 FlappyElement

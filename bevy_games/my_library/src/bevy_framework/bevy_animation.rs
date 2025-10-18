@@ -174,3 +174,54 @@ macro_rules! spawn_animated_sprite {
             )*;
     }
 }
+
+/// Define a Parallax background level
+#[derive(Component)]
+pub struct ContinualParallax {
+    /// Image width, defines where to move when no longer visible
+    image_width: f32,
+    // Move the image every n milliseconds
+    move_every_ms: u128,
+    // How far should the image move each tick?
+    scroll_speed: Vec2,
+    // Internal state for animations timer
+    timer: u128,
+}
+
+impl ContinualParallax {
+    /// Creates a new parallax layer definition
+    pub fn new(image_width: f32, move_every_ms: u128, scroll_speed: Vec2) -> Self {
+        Self {
+            image_width,
+            move_every_ms,
+            scroll_speed,
+            timer: 0,
+        }
+    }
+}
+
+/// Implements a _conveyor belt_ that puts a second version of the image to
+/// the invisible right side of the first. When the first image is moved left
+/// out of the screen, it is positioned on the invisible right edge of the
+/// remaining image.
+pub fn continual_parallax(
+    mut animated: Query<(&mut ContinualParallax, &mut Transform)>,
+    time: Res<Time>,
+) {
+    let ms_since_last_call = time.delta().as_millis();
+    animated
+        .iter_mut()
+        .for_each(|(mut parallax, mut transform)| {
+            parallax.timer += ms_since_last_call;
+            if parallax.timer >= parallax.move_every_ms {
+                parallax.timer = 0;
+                transform.translation.x -= parallax.scroll_speed.x;
+                transform.translation.y -= parallax.scroll_speed.y;
+
+                // Check if image moved out ouf sight on the left screen border
+                if transform.translation.x <= -parallax.image_width {
+                    transform.translation.x = parallax.image_width
+                }
+            }
+        });
+}
