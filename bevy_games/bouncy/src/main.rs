@@ -1,9 +1,13 @@
 use bevy::{
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
+    platform::collections::{HashMap, HashSet},
     prelude::*,
 };
 
-use my_library::{egui::egui::Color32, *};
+use my_library::{
+    egui::egui::{Color32, emath::inverse_lerp},
+    *,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Default, States)]
 pub enum GamePhase {
@@ -93,6 +97,10 @@ fn setup(
 ) {
     commands.spawn(Camera2d::default()).insert(BouncyElement);
     commands.insert_resource(CollisionTime::default());
+    commands.insert_resource(StaticQuadTree::new(
+        Vec2::new(1024.0, 768.0),
+        QUAD_TREE_DEPTH,
+    ));
     spawn_bouncies(1, &mut commands, &mut rng, &assets, &loaded_assets);
 }
 
@@ -184,10 +192,11 @@ fn bounce_on_collision(
     });
 }
 
-fn collisions(
+fn collisions_AABB(
     mut collision_time: ResMut<CollisionTime>,
     query: Query<(Entity, &Transform, &AxisAlignedBoundingBox)>,
     mut impulse: EventWriter<Impulse>,
+    quad_tree: Res<StaticQuadTree>,
 ) {
     // Start the clock
     let now = std::time::Instant::now();
@@ -210,6 +219,59 @@ fn collisions(
                     );
                 }
                 n += 1;
+            }
+        }
+    }
+
+    // Store the time result
+    collision_time.time = now.elapsed().as_millis();
+    collision_time.checks = n;
+}
+
+fn collisions(
+    mut collision_time: ResMut<CollisionTime>,
+    query: Query<(Entity, &Transform, &AxisAlignedBoundingBox)>,
+    mut impulse: EventWriter<Impulse>,
+    quad_tree: Res<StaticQuadTree>,
+) {
+    // Start the clock
+    let now = std::time::Instant::now();
+
+    let mut spatial_index: HashMap<usize, Vec<(Entity, Rect2D)>> = HashMap::new();
+
+    let tree_positions: Vec<(Entity, usize, Rect2D)> = query
+        .iter()
+        .map(|(entity, transform, bbox)| {
+            let bbox = bbox.as_rect(transform.translation.truncate());
+            let node = quad_tree.smallest_node(&bbox);
+            for in_node in quad_tree.intersecting_nodes(&bbox) {
+                if let Some(contents) = spatial_index.get_mut(&in_node) {
+                    contents.push((entity, bbox));
+                } else {
+                    spatial_index.insert(in_node, vec![(entity, bbox)]);
+                }
+            }
+
+            (entity, node, bbox)
+        })
+        .collect();
+
+    // AABB with spatial quadrants
+    let mut n = 0;
+
+    for (entity, node, box_a) in tree_positions {
+        if let Some(entities_here) = spatial_index.get(&node) {
+            if let Some((entity_b, _)) = entities_here
+                .iter()
+                .filter(|(entity_b, _)| *entity_b != entity)
+                .find(|(_, box_b)| {
+                    n += 1;
+                    box_a.intersect(box_b)
+                })
+            {
+                let (_, ball_a, _) = query.get(entity).unwrap();
+                let (_, ball_b, _) = query.get(*entity_b).unwrap();
+                bounce_on_collision(entity, ball_a.translation, ball_b.translation, &mut impulse);
             }
         }
     }
@@ -260,5 +322,139 @@ impl Rect2D {
             && self.max.x >= other.min.x
             && self.min.y <= other.max.y
             && self.max.y >= other.min.y
+    }
+
+    fn center(&self) -> Vec2 {
+        (self.min + self.max) / 2.0
+    }
+
+    fn quadrants(&self) -> Vec<Self> {
+        let center = self.center();
+        vec![
+            // top-left
+            Self::new(self.min, center),
+            // top-right
+            Self::new(
+                Vec2::new(center.x, self.min.y),
+                Vec2::new(self.max.x, center.y),
+            ),
+            // bottom-left
+            Self::new(
+                Vec2::new(self.min.x, center.y),
+                Vec2::new(center.x, self.max.y),
+            ),
+            // bottom-right
+            Self::new(center, self.max),
+        ]
+    }
+}
+
+const QUAD_TREE_DEPTH: usize = 4;
+
+#[derive(Debug)]
+pub struct StaticQuadTreeNode {
+    /// Size of this node
+    bounds: Rect2D,
+    /// Children quadrants of this node. None if this is
+    /// on the maximal depth level
+    children: Option<[usize; 4]>,
+}
+
+/// Resource for nodes in a quad-tree collision detection algorithm
+#[derive(Debug, Resource)]
+pub struct StaticQuadTree {
+    nodes: Vec<StaticQuadTreeNode>,
+}
+
+impl StaticQuadTree {
+    fn new(screen_size: Vec2, max_depth: usize) -> Self {
+        let mut nodes = Vec::new();
+
+        let half = screen_size / 2.0;
+        let top = StaticQuadTreeNode {
+            bounds: Rect2D::new(Vec2::ZERO - half, half),
+            children: None,
+        };
+        nodes.push(top);
+        Self::subdivide(&mut nodes, 0, 1, max_depth);
+        Self { nodes }
+    }
+
+    fn subdivide(
+        nodes: &mut Vec<StaticQuadTreeNode>,
+        index: usize,
+        depth: usize,
+        max_depth: usize,
+    ) {
+        let mut children = nodes[index].bounds.quadrants();
+        let n = nodes.len();
+        let child_index = [n, n + 1, n + 2, n + 3];
+        nodes[index].children = Some(child_index);
+        children.drain(0..4).for_each(|quad| {
+            nodes.push(StaticQuadTreeNode {
+                bounds: quad,
+                children: None,
+            })
+        });
+
+        if depth < max_depth {
+            for index in child_index {
+                Self::subdivide(nodes, index, depth + 1, max_depth);
+            }
+        }
+    }
+
+    /// Finds the smallest quadrant that completely contains an entity
+    fn smallest_node(&self, target: &Rect2D) -> usize {
+        let mut current_index = 0;
+
+        #[allow(clippy::while_let_loop)]
+        loop {
+            if let Some(children) = self.nodes[current_index].children {
+                let matches: Vec<usize> = children
+                    .iter()
+                    .filter_map(|child| {
+                        if self.nodes[*child].bounds.intersect(target) {
+                            Some(*child)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                if matches.len() == 1 {
+                    // The target is contained in only one quadrant, so dive deeper
+                    // within that quadrant
+                    current_index = matches[0];
+                } else {
+                    // If there is more than one match, the target is contained in
+                    // more than one quadrants, thus overlapping a boundary. We
+                    // cannot get deeper than we are.
+                    break;
+                }
+            } else {
+                // There are no children quadrants defined at this level, so
+                // don't dive deeper.
+                break;
+            }
+        }
+        current_index
+    }
+
+    fn intersecting_nodes(&self, target: &Rect2D) -> HashSet<usize> {
+        let mut result = HashSet::new();
+        self.intersect(0, &mut result, target);
+        result
+    }
+
+    fn intersect(&self, index: usize, result: &mut HashSet<usize>, target: &Rect2D) {
+        if self.nodes[index].bounds.intersect(target) {
+            result.insert(index);
+            if let Some(children) = &self.nodes[index].children {
+                for child in children {
+                    self.intersect(*child, result, target);
+                }
+            }
+        }
     }
 }
