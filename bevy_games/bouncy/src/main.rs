@@ -199,7 +199,7 @@ fn collisions(
             .filter(|(entity_b, _)| *entity_b != entity_a)
             .filter(|(_, ball_b)| {
                 n += 1; // Count the collision check
-                ball_a.translation.distance(ball_b.translation) < 8.0
+                ball_a.translation.distance_squared(ball_b.translation) < 8.0
             })
             .for_each(|(_, ball_b)| {
                 bounce_on_collision(
