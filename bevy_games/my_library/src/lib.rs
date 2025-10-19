@@ -48,3 +48,8 @@ pub use bevy_assets::*;
 pub mod anyhow {
     pub use anyhow::*;
 }
+
+/// Wraps the bevy_egui crate;
+pub mod egui {
+    pub use bevy_egui::*;
+}

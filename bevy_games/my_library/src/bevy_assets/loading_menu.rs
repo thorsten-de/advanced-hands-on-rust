@@ -1,11 +1,9 @@
+use crate::bevy_assets::asset_manager::setup_asset_store;
+use crate::egui::{EguiContexts, egui::Window};
+use crate::{AssetManager, AssetStore, LoadedAssets, MenuResource};
 use bevy::asset::LoadState;
-use bevy::render::texture;
 use bevy::state::state::FreelyMutableState;
 use bevy::{asset::LoadedUntypedAsset, prelude::*};
-use bevy_egui::{EguiContexts, egui::Window};
-
-use crate::bevy_assets::asset_manager::setup_asset_store;
-use crate::{AssetManager, AssetStore, LoadedAssets, MenuResource};
 
 /// Store handles to be loaded
 #[derive(Resource)]
