@@ -114,7 +114,7 @@ fn warp_at_edge(mut query: Query<&mut Transform, With<Ball>>) {
 
 fn show_performance(
     mut egui_context: egui::EguiContexts,
-    diagnostics: Res<DiagnosticsStore>, //(1)
+    diagnostics: Res<DiagnosticsStore>, // get bevys diagnostic informations as a resource from DI
     mut collision_time: ResMut<CollisionTime>,
     mut commands: Commands,
     mut rng: ResMut<RandomNumberGenerator>,
@@ -122,16 +122,16 @@ fn show_performance(
     query: Query<&Transform, With<Ball>>,
     loaded_assets: Res<LoadedAssets>,
 ) {
-    let n_balls = query.iter().count(); //(2)
-    let fps = diagnostics //(3)
+    let n_balls = query.iter().count(); // count the number of balls currently simulated
+    let fps = diagnostics // get diagnostical information about the average fps of recent frames
         .get(&FrameTimeDiagnosticsPlugin::FPS)
         .and_then(|fps| fps.average())
         .unwrap();
     collision_time.fps = fps;
     egui::egui::Window::new("Performance").show(egui_context.ctx_mut(), |ui| {
-        let fps_text = format!("FPS: {fps:.1}"); //(4)
+        let fps_text = format!("FPS: {fps:.1}"); // format fps with one decimal place
         let color = match fps as u32 {
-            //(5)
+            // color scale for fps ranges
             0..=29 => Color32::RED,
             30..=59 => Color32::GOLD,
             _ => Color32::GREEN,
@@ -144,7 +144,7 @@ fn show_performance(
         ui.label(&format!("Collision Checks: {}", collision_time.checks));
         ui.label(&format!("# Balls: {n_balls}"));
         if ui.button("Add Ball").clicked() {
-            //(6)
+            // add buttons to user interface for adding more balls
             println!(
                 "{n_balls}, {}, {}, {:.0}",
                 collision_time.time, collision_time.checks, collision_time.fps
@@ -174,10 +174,10 @@ fn bounce_on_collision(
     ball_b: Vec3,
     impulse: &mut EventWriter<Impulse>,
 ) {
-    let a_to_b = (ball_a - ball_b).normalize(); //(7)
+    let a_to_b = (ball_a - ball_b).normalize(); // get the direction, normalized to length 1
     impulse.write(Impulse {
         target: entity,
-        amount: a_to_b / 8.0, //(8)
+        amount: a_to_b / 8.0, // apply a force based on the direction
         absolute: false,
         source: 0,
     });
