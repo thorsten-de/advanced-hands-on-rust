@@ -8,9 +8,9 @@ pub use aabb::AxisAlignedBoundingBox;
 pub use rect2d::Rect2D;
 pub use static_quadtree::*;
 
+use crate::PhysicsPosition;
 use bevy::{platform::collections::HashMap, prelude::*};
 use std::marker::PhantomData;
-
 /// This event messages when a collision was detected
 #[derive(Event)]
 pub struct OnCollision<A, B>
@@ -28,8 +28,8 @@ where
 /// Checks whether collisions between Components of type A and B occur
 pub fn check_collisions<A, B>(
     quad_tree: Res<StaticQuadTree>,
-    query_a: Query<(Entity, &Transform, &AxisAlignedBoundingBox), With<A>>,
-    query_b: Query<(Entity, &Transform, &AxisAlignedBoundingBox), With<B>>,
+    query_a: Query<(Entity, &PhysicsPosition, &AxisAlignedBoundingBox), With<A>>,
+    query_b: Query<(Entity, &PhysicsPosition, &AxisAlignedBoundingBox), With<B>>,
     mut sender: EventWriter<OnCollision<A, B>>,
 ) where
     A: Component,
@@ -38,7 +38,7 @@ pub fn check_collisions<A, B>(
     let mut spatial_index: HashMap<usize, Vec<(Entity, Rect2D)>> = HashMap::new();
 
     query_b.iter().for_each(|(entity, transform, bbox)| {
-        let bbox = bbox.as_rect(transform.translation.truncate());
+        let bbox = bbox.as_rect(transform.end_frame);
         let in_node = quad_tree.smallest_node(&bbox);
         if let Some(contents) = spatial_index.get_mut(&in_node) {
             contents.push((entity, bbox));
@@ -48,7 +48,7 @@ pub fn check_collisions<A, B>(
     });
 
     query_a.iter().for_each(|(entity_a, transform_a, bbox_a)| {
-        let bbox_a = bbox_a.as_rect(transform_a.translation.truncate());
+        let bbox_a = bbox_a.as_rect(transform_a.end_frame);
         for node in quad_tree.intersecting_nodes(&bbox_a) {
             if let Some(contents) = spatial_index.get(&node) {
                 for (entity_b, bbox_b) in contents {
