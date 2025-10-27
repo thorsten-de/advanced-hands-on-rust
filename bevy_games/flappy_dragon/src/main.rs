@@ -26,7 +26,7 @@ fn main() -> anyhow::Result<()> {
     add_phase!(app, GamePhase, GamePhase::Flapping,
         start => [ setup ],
         run => [ flap, clamp, move_walls, hit_wall, cycle_animations, continual_parallax,
-                 physics_clock, sum_impulses, apply_gravity, apply_velocity],
+                 physics_clock, sum_impulses, apply_gravity, apply_velocity, check_collisions::<Flappy, Obstacle>],
         exit => [ cleanup::<FlappyElement> ]
     );
 
@@ -91,6 +91,7 @@ fn main() -> anyhow::Result<()> {
                 ]),
             ),
     )
+    .add_event::<OnCollision<Flappy, Obstacle>>()
     .run();
 
     Ok(())
@@ -115,7 +116,8 @@ fn setup(
         Flappy,
         FlappyElement,
         Velocity::default(),
-        ApplyGravity
+        ApplyGravity,
+        AxisAlignedBoundingBox::new(62.0, 65.0)
     );
 
     let width = 1280.0;
@@ -218,6 +220,7 @@ fn setup(
     ));
     */
 
+    commands.insert_resource(StaticQuadTree::new(Vec2::new(1024.0, 768.0), 4));
     build_wall(&mut commands, &assets, &loaded_assets, rng.range(-5..5)); //(12)
 }
 
@@ -240,7 +243,8 @@ fn build_wall(
                 &loaded_assets,
                 Obstacle,
                 FlappyElement,
-                Velocity::new_2d(-4.0, 0.0)
+                Velocity::new_2d(-8.0, 0.0),
+                AxisAlignedBoundingBox::new(32.0, 32.0)
             );
             //(15)
         }
@@ -298,22 +302,14 @@ fn move_walls(
 }
 
 fn hit_wall(
-    player: Query<&Transform, With<Flappy>>,  //(24)
-    walls: Query<&Transform, With<Obstacle>>, //(25)
+    mut collisions: EventReader<OnCollision<Flappy, Obstacle>>,
     mut state: ResMut<NextState<GamePhase>>,
     assets: Res<AssetStore>,
     loaded_assets: Res<LoadedAssets>,
     mut commands: Commands,
 ) {
-    if let Ok(player) = player.single() {
-        //(26)
-        for wall in walls.iter() {
-            //(27)
-            let distance = player.translation.distance(wall.translation); //(28)
-            if distance < 32.0 {
-                state.set(GamePhase::GameOver);
-                assets.play("crash", &mut commands, &loaded_assets);
-            }
-        }
+    for _collision in collisions.read() {
+        assets.play("crash", &mut commands, &loaded_assets);
+        let _ = state.set(GamePhase::GameOver);
     }
 }
