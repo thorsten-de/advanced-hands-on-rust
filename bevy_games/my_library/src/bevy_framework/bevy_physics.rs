@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_egui::egui::frame;
 
 // How frequently should the physics tick fire (ms)
 const PHYSICS_TICK_TIME: u128 = 33;
@@ -16,12 +17,29 @@ pub fn physics_clock(
     mut clock: Local<PhysicsTimer>,
     time: Res<Time>,
     mut on_tick: EventWriter<PhysicsTick>,
+    mut physics_position: Query<(&mut PhysicsPosition, &mut Transform)>,
 ) {
     let ms_since_last_call = time.delta().as_millis();
     clock.0 += ms_since_last_call;
     if clock.0 >= PHYSICS_TICK_TIME {
         clock.0 = 0;
+        physics_position
+            .iter_mut()
+            .for_each(|(mut pos, mut transform)| {
+                transform.translation.x = pos.end_frame.x;
+                transform.translation.y = pos.end_frame.y;
+                pos.start_frame = pos.end_frame;
+            });
         on_tick.write(PhysicsTick);
+    } else {
+        let frame_progress = clock.0 as f32 / PHYSICS_TICK_TIME as f32;
+        physics_position
+            .iter_mut()
+            .for_each(|(pos, mut transform)| {
+                let interpolated_pos = pos.interpolate(frame_progress);
+                transform.translation.x = interpolated_pos.x;
+                transform.translation.y = interpolated_pos.y;
+            });
     }
 }
 
@@ -86,12 +104,12 @@ pub fn sum_impulses(mut impulses: EventReader<Impulse>, mut velocities: Query<&m
 /// each tick of the physics clock
 pub fn apply_velocity(
     mut tick: EventReader<PhysicsTick>,
-    mut movement: Query<(&Velocity, &mut Transform)>,
+    mut movement: Query<(&Velocity, &mut PhysicsPosition)>,
 ) {
     for _tick in tick.read() {
-        movement.iter_mut().for_each(|(velocity, mut transform)| {
-            transform.translation += velocity.0;
-        });
+        movement
+            .iter_mut()
+            .for_each(|(velocity, mut position)| position.end_frame += velocity.0.truncate());
     }
 }
 
@@ -110,5 +128,29 @@ pub fn apply_gravity(
         gravity.iter_mut().for_each(|mut velocity| {
             velocity.0.y -= 0.75;
         });
+    }
+}
+
+/// Collate the start and end frame positions of a physics entity
+#[derive(Component)]
+pub struct PhysicsPosition {
+    /// The position at the start of the fixed time frame
+    pub start_frame: Vec2,
+    /// The position at the end of the fixed time frame
+    pub end_frame: Vec2,
+}
+
+impl PhysicsPosition {
+    /// Create a new physics position without any forces applied
+    /// in this frame yet
+    pub fn new(start: Vec2) -> Self {
+        Self {
+            start_frame: start,
+            end_frame: start,
+        }
+    }
+
+    fn interpolate(&self, t: f32) -> Vec2 {
+        self.start_frame + (self.end_frame - self.start_frame) * t
     }
 }

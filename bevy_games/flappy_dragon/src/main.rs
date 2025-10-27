@@ -117,7 +117,8 @@ fn setup(
         FlappyElement,
         Velocity::default(),
         ApplyGravity,
-        AxisAlignedBoundingBox::new(62.0, 65.0)
+        AxisAlignedBoundingBox::new(62.0, 65.0),
+        PhysicsPosition::new(Vec2::new(-490.0, 0.0))
     );
 
     let width = 1280.0;
@@ -244,7 +245,8 @@ fn build_wall(
                 Obstacle,
                 FlappyElement,
                 Velocity::new_2d(-8.0, 0.0),
-                AxisAlignedBoundingBox::new(32.0, 32.0)
+                AxisAlignedBoundingBox::new(32.0, 32.0),
+                PhysicsPosition::new(Vec2::new(512.0, y as f32 * 32.0))
             );
             //(15)
         }
