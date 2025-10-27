@@ -10,6 +10,9 @@ pub use bevy_animation::*;
 mod bevy_physics;
 pub use bevy_physics::*;
 
+mod bevy_collision;
+pub use bevy_collision::*;
+
 /// This plugin provides game state handling. It requires an enumeration of
 /// known game states.
 ///
