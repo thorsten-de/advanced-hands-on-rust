@@ -24,7 +24,8 @@ fn main() -> anyhow::Result<()> {
 
     add_phase!(app, GamePhase, GamePhase::Playing,
        start => [ setup ],
-       run => [end_game, physics_clock, sum_impulses, apply_gravity, apply_velocity],
+       run => [movement, end_game, physics_clock, sum_impulses, apply_gravity, apply_velocity,
+        cap_velocity.after(apply_velocity)],
        exit => [cleanup::<GameElement>]
     );
 
@@ -72,4 +73,40 @@ fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<Loa
 
 fn end_game(mut state: ResMut<NextState<GamePhase>>, assets: Res<AssetStore>) {
     // let _ = state.set(GamePhase::GameOver);
+}
+
+fn movement(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut player_query: Query<(Entity, &mut Transform), With<Player>>,
+    mut impulses: EventWriter<Impulse>,
+) {
+    let Ok((entity, mut transform)) = player_query.single_mut() else {
+        return;
+    };
+    if keyboard.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]) {
+        transform.rotate(Quat::from_rotation_z(f32::to_radians(2.0)));
+    }
+    if keyboard.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]) {
+        transform.rotate(Quat::from_rotation_z(f32::to_radians(-2.0)));
+    }
+    if keyboard.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]) {
+        impulses.write(Impulse {
+            target: entity,
+            amount: transform.local_y().as_vec3(),
+            absolute: false,
+            source: 1,
+        });
+    }
+}
+
+fn cap_velocity(mut player_query: Query<&mut Velocity, With<Player>>) {
+    let Ok(mut velocity) = player_query.single_mut() else {
+        return;
+    };
+    let v2 = velocity.0.truncate();
+    if v2.length() > 5.0 {
+        let v2 = v2.normalize() * 5.0;
+        velocity.0.x = v2.x;
+        velocity.0.y = v2.y;
+    }
 }
