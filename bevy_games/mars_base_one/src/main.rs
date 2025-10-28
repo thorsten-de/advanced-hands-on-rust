@@ -44,7 +44,7 @@ fn main() -> anyhow::Result<()> {
             GamePhase::Playing,
             GamePhase::GameOver,
         ))
-        .add_plugins(AssetManager::new())
+        .add_plugins(AssetManager::new().add_image("ship", "ship.png")?)
         .insert_resource(Animations::new())
         .run();
 
@@ -53,6 +53,21 @@ fn main() -> anyhow::Result<()> {
 
 fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<LoadedAssets>) {
     commands.spawn(Camera2d::default()).insert(GameElement);
+
+    spawn_image!(
+        assets,
+        commands,
+        "ship",
+        0.0,
+        0.0,
+        1.0,
+        &loaded_assets,
+        GameElement,
+        Player,
+        Velocity::default(),
+        PhysicsPosition::new(Vec2::new(0.0, 0.0)),
+        ApplyGravity
+    );
 }
 
 fn end_game(mut state: ResMut<NextState<GamePhase>>, assets: Res<AssetStore>) {
