@@ -3360,6 +3360,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mars_base_one"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "my_library",
+]
+
+[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

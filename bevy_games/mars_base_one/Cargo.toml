@@ -1,0 +1,8 @@
+[package]
+name = "mars_base_one"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { workspace = true }
+my_library = { path = "../my_library" }
