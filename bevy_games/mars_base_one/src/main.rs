@@ -71,8 +71,20 @@ fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<Loa
     );
 }
 
-fn end_game(mut state: ResMut<NextState<GamePhase>>, assets: Res<AssetStore>) {
-    // let _ = state.set(GamePhase::GameOver);
+fn end_game(
+    mut state: ResMut<NextState<GamePhase>>,
+    player_query: Query<&Transform, With<Player>>,
+) {
+    let Ok(transform) = player_query.single() else {
+        return;
+    };
+    if transform.translation.y < -384.0
+        || transform.translation.y > 384.0
+        || transform.translation.x < -512.0
+        || transform.translation.x > 512.0
+    {
+        state.set(GamePhase::GameOver);
+    }
 }
 
 fn movement(
