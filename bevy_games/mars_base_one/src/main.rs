@@ -77,7 +77,7 @@ fn setup(
     // is done with a *projection matrix*.
     let projection = Projection::Orthographic(OrthographicProjection {
         scaling_mode: ScalingMode::WindowSize,
-        scale: 0.5,
+        scale: 5.0,
         ..OrthographicProjection::default_2d()
     });
     commands.spawn((camera, projection, GameElement, MyCamera));
@@ -193,7 +193,24 @@ impl World {
         };
 
         result.clear_tiles(width / 2, height / 2);
-        result.clear_tiles(200, 200);
+
+        let mut holes = vec![(width / 2, height / 2)];
+
+        for _ in 0..10 {
+            let x = rng.range(5..width - 5);
+            let y = rng.range(5..height - 5);
+            holes.push((x, y));
+            result.clear_tiles(x, y);
+            result.clear_tiles(x + 2, y);
+            result.clear_tiles(x - 2, y);
+            result.clear_tiles(x, y + 2);
+            result.clear_tiles(x, y - 2);
+        }
+        for i in 0..holes.len() {
+            let start = holes[i];
+            let end = holes[(i + 1) % holes.len()];
+            result.clear_line(start, end);
+        }
 
         result
     }
@@ -241,6 +258,26 @@ impl World {
                     self.solid[idx] = false;
                 }
             }
+        }
+    }
+
+    fn clear_line(&mut self, start: (usize, usize), end: (usize, usize)) {
+        let (mut x, mut y) = (start.0 as f32, start.1 as f32);
+        let (slope_x, slope_y) = (
+            (end.0 as f32 - x) / self.width as f32,
+            (end.1 as f32 - y) / self.height as f32,
+        );
+        loop {
+            let (tx, ty) = (x as usize, y as usize);
+            if tx < 1 || tx >= self.width || ty < 1 || ty >= self.height {
+                break;
+            }
+            if tx == end.0 && ty == end.1 {
+                break;
+            }
+            self.clear_tiles(x as usize, y as usize);
+            x += slope_x;
+            y += slope_y;
         }
     }
 }
