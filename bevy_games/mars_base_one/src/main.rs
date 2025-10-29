@@ -177,6 +177,7 @@ struct World {
 }
 
 const CELL_SIZE: f32 = 24.0;
+const SOLID_PERCENT: f32 = 0.6;
 
 impl World {
     /// Calculates the 1d index for a given cell in the 2d matrix
@@ -216,7 +217,52 @@ impl World {
             result.clear_tiles(width / 2, y);
         }
 
+        result.outward_diffusion(&holes, rng);
+
         result
+    }
+
+    fn find_random_closed_tile(&self, rng: &mut RandomNumberGenerator) -> (usize, usize) {
+        loop {
+            let x = rng.range(0..self.width);
+            let y = rng.range(0..self.height);
+            let idx = self.map_idx(x, y);
+            if self.solid[idx] {
+                return (x, y);
+            }
+        }
+    }
+
+    fn outward_diffusion(&mut self, holes: &Vec<(usize, usize)>, rng: &mut RandomNumberGenerator) {
+        let mut done = false;
+        while !done {
+            let start_tile = holes[rng.range(0..10)];
+            let target = self.find_random_closed_tile(rng);
+
+            let (mut x, mut y) = (start_tile.0 as f32, start_tile.1 as f32);
+            let (slope_x, slope_y) = (
+                (target.0 as f32 - x) / self.width as f32,
+                (target.1 as f32 - y) / self.height as f32,
+            );
+            loop {
+                if x < 1.0 || x >= self.width as f32 || y < 1.0 || y >= self.height as f32 {
+                    break;
+                }
+                let tile_id = self.map_idx(x as usize, y as usize);
+                if self.solid[tile_id] {
+                    self.clear_tiles(x as usize, y as usize);
+                    break;
+                }
+                x += slope_x;
+                y += slope_y;
+            }
+
+            let solid_count = self.solid.iter().filter(|s| **s).count();
+            let solid_percent = solid_count as f32 / (self.width * self.height) as f32;
+            if solid_percent < SOLID_PERCENT {
+                done = true;
+            }
+        }
     }
 
     /// Spawns the world into the game
