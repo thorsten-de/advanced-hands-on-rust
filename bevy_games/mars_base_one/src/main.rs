@@ -30,7 +30,7 @@ fn main() -> anyhow::Result<()> {
     add_phase!(app, GamePhase, GamePhase::Playing,
        start => [ setup ],
        run => [movement, end_game, physics_clock, sum_impulses, apply_gravity, apply_velocity,
-        cap_velocity.after(apply_velocity)],
+        cap_velocity.after(apply_velocity), camera_follow.after(cap_velocity)],
        exit => [cleanup::<GameElement>]
     );
 
@@ -135,4 +135,17 @@ fn cap_velocity(mut player_query: Query<&mut Velocity, With<Player>>) {
         velocity.0.x = v2.x;
         velocity.0.y = v2.y;
     }
+}
+
+fn camera_follow(
+    player_query: Query<&Transform, (With<Player>, Without<MyCamera>)>,
+    mut camera_query: Query<&mut Transform, (With<MyCamera>, Without<Player>)>,
+) {
+    let Ok(player) = player_query.single() else {
+        return;
+    };
+    let Ok(mut camera) = camera_query.single_mut() else {
+        return;
+    };
+    camera.translation = Vec3::new(player.translation.x, player.translation.y, 10.0);
 }
