@@ -192,8 +192,12 @@ impl World {
             solid: vec![true; width * height],
         };
 
+        result.clear_tiles(width / 2, height / 2);
+        result.clear_tiles(200, 200);
+
         result
     }
+
     /// Spawns the world into the game
     fn spawn(&self, assets: &AssetStore, commands: &mut Commands, loaded_assets: &LoadedAssets) {
         let x_offset = self.width as f32 * CELL_SIZE / 2.0;
@@ -220,6 +224,21 @@ impl World {
                         PhysicsPosition::new(position),
                         AxisAlignedBoundingBox::new(CELL_SIZE, CELL_SIZE)
                     );
+                }
+            }
+        }
+    }
+
+    fn clear_tiles(&mut self, x: usize, y: usize) {
+        for offset_x in -1..=1 {
+            for offset_y in -1..=1 {
+                let x = x as isize + offset_x;
+                let y = y as isize + offset_y;
+
+                // The checks ensure that there will always be a solid one-cell border around the map
+                if 0 < x && x < self.width as isize - 1 && 0 < y && y < self.height as isize - 1 {
+                    let idx = self.map_idx(x as usize, y as usize);
+                    self.solid[idx] = false;
                 }
             }
         }
