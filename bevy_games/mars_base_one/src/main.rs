@@ -34,12 +34,15 @@ fn main() -> anyhow::Result<()> {
     add_phase!(app, GamePhase, GamePhase::Playing,
        start => [ setup ],
        run => [movement, end_game, physics_clock, sum_impulses, apply_gravity, apply_velocity,
-        cap_velocity.after(apply_velocity), camera_follow.after(cap_velocity)],
+        cap_velocity.after(apply_velocity),
+        check_collisions::<Player, Ground>, bounce,
+        camera_follow.after(cap_velocity)],
        exit => [cleanup::<GameElement>]
     );
 
     app.add_event::<Impulse>()
         .add_event::<PhysicsTick>()
+        .add_event::<OnCollision<Player, Ground>>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Mars Base One".to_string(),
@@ -77,7 +80,7 @@ fn setup(
     // is done with a *projection matrix*.
     let projection = Projection::Orthographic(OrthographicProjection {
         scaling_mode: ScalingMode::WindowSize,
-        scale: 5.0,
+        scale: 0.5,
         ..OrthographicProjection::default_2d()
     });
     commands.spawn((camera, projection, GameElement, MyCamera));
@@ -93,7 +96,8 @@ fn setup(
         GameElement,
         Player,
         Velocity::default(),
-        PhysicsPosition::new(Vec2::new(0.0, 0.0)) // ApplyGravity
+        PhysicsPosition::new(Vec2::new(0.0, 0.0)), // ApplyGravity,
+        AxisAlignedBoundingBox::new(24.0, 24.0)
     );
 
     let world = World::new(200, 200, &mut rng);
@@ -108,10 +112,11 @@ fn end_game(
     let Ok(transform) = player_query.single() else {
         return;
     };
-    if transform.translation.y < -384.0
-        || transform.translation.y > 384.0
-        || transform.translation.x < -512.0
-        || transform.translation.x > 512.0
+    if false
+        && (transform.translation.y < -384.0
+            || transform.translation.y > 384.0
+            || transform.translation.x < -512.0
+            || transform.translation.x > 512.0)
     {
         state.set(GamePhase::GameOver);
     }
@@ -164,6 +169,36 @@ fn camera_follow(
         return;
     };
     camera.translation = Vec3::new(player.translation.x, player.translation.y, 10.0);
+}
+
+fn bounce(
+    mut collisions: EventReader<OnCollision<Player, Ground>>,
+    mut player_query: Query<&PhysicsPosition, With<Player>>,
+    ground_query: Query<&PhysicsPosition, With<Ground>>,
+    mut impulses: EventWriter<Impulse>,
+) {
+    let mut bounce = Vec2::default();
+    let mut entity = None;
+    let mut bounces = 0;
+    for collision in collisions.read() {
+        if let Ok(player) = player_query.single_mut() {
+            if let Ok(ground) = ground_query.get(collision.entity_b) {
+                entity = Some(collision.entity_a);
+                let difference = player.start_frame - ground.start_frame;
+                bounces += 1;
+                bounce += difference;
+            }
+        }
+    }
+    if bounces > 0 {
+        bounce = bounce.normalize();
+        impulses.write(Impulse {
+            target: entity.unwrap(),
+            amount: Vec3::new(bounce.x, bounce.y, 0.0),
+            absolute: true,
+            source: 2,
+        });
+    }
 }
 
 /// Defines the world by a 2d-matrix of cells.
