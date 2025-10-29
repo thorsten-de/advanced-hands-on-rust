@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::render::camera::ScalingMode;
 use my_library::*;
 
 /// Game Phases for Mars Base One
@@ -18,6 +19,10 @@ struct GameElement;
 /// Component that identifies the player entity
 #[derive(Component)]
 struct Player;
+
+/// Component representing the camera tag
+#[derive(Component)]
+struct MyCamera;
 
 fn main() -> anyhow::Result<()> {
     let mut app = App::new();
@@ -53,7 +58,16 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<LoadedAssets>) {
-    commands.spawn(Camera2d::default()).insert(GameElement);
+    let camera = Camera2d::default();
+    // This determines the transformation from world-coordinates to screen-coordinates.
+    // A camera defines how the viewport is rendered to show the world. Technically, this
+    // is done with a *projection matrix*.
+    let projection = Projection::Orthographic(OrthographicProjection {
+        scaling_mode: ScalingMode::WindowSize,
+        scale: 0.5,
+        ..OrthographicProjection::default_2d()
+    });
+    commands.spawn((camera, projection, GameElement, MyCamera));
 
     spawn_image!(
         assets,
