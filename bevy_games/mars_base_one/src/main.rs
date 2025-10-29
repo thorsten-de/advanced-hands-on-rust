@@ -212,6 +212,10 @@ impl World {
             result.clear_line(start, end);
         }
 
+        for y in height / 2..height {
+            result.clear_tiles(width / 2, y);
+        }
+
         result
     }
 
