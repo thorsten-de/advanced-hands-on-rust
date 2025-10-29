@@ -24,6 +24,10 @@ struct Player;
 #[derive(Component)]
 struct MyCamera;
 
+/// Component to tag ground entities
+#[derive(Component)]
+struct Ground;
+
 fn main() -> anyhow::Result<()> {
     let mut app = App::new();
 
@@ -50,14 +54,23 @@ fn main() -> anyhow::Result<()> {
             GamePhase::Playing,
             GamePhase::GameOver,
         ))
-        .add_plugins(AssetManager::new().add_image("ship", "ship.png")?)
+        .add_plugins(
+            AssetManager::new()
+                .add_image("ship", "ship.png")?
+                .add_image("ground", "ground.png")?,
+        )
         .insert_resource(Animations::new())
         .run();
 
     Ok(())
 }
 
-fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<LoadedAssets>) {
+fn setup(
+    mut commands: Commands,
+    assets: Res<AssetStore>,
+    loaded_assets: Res<LoadedAssets>,
+    mut rng: ResMut<RandomNumberGenerator>,
+) {
     let camera = Camera2d::default();
     // This determines the transformation from world-coordinates to screen-coordinates.
     // A camera defines how the viewport is rendered to show the world. Technically, this
@@ -80,9 +93,12 @@ fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<Loa
         GameElement,
         Player,
         Velocity::default(),
-        PhysicsPosition::new(Vec2::new(0.0, 0.0)),
-        ApplyGravity
+        PhysicsPosition::new(Vec2::new(0.0, 0.0)) // ApplyGravity
     );
+
+    let world = World::new(200, 200, &mut rng);
+    world.spawn(&assets, &mut commands, &loaded_assets);
+    commands.insert_resource(StaticQuadTree::new(Vec2::new(10240.0, 7680.0), 6));
 }
 
 fn end_game(
@@ -148,4 +164,64 @@ fn camera_follow(
         return;
     };
     camera.translation = Vec3::new(player.translation.x, player.translation.y, 10.0);
+}
+
+/// Defines the world by a 2d-matrix of cells.
+struct World {
+    /// If a cell is a solid wall for each given index
+    solid: Vec<bool>,
+    /// Horizontal map size
+    width: usize,
+    /// Vertical map size
+    height: usize,
+}
+
+const CELL_SIZE: f32 = 24.0;
+
+impl World {
+    /// Calculates the 1d index for a given cell in the 2d matrix
+    fn map_idx(&self, x: usize, y: usize) -> usize {
+        y * self.width + x
+    }
+
+    /// Creates a new world
+    fn new(width: usize, height: usize, rng: &mut RandomNumberGenerator) -> Self {
+        let mut result = Self {
+            width,
+            height,
+            solid: vec![true; width * height],
+        };
+
+        result
+    }
+    /// Spawns the world into the game
+    fn spawn(&self, assets: &AssetStore, commands: &mut Commands, loaded_assets: &LoadedAssets) {
+        let x_offset = self.width as f32 * CELL_SIZE / 2.0;
+        let y_offset = self.height as f32 * CELL_SIZE / 2.0;
+
+        for y in 0..self.height {
+            for x in 0..self.width {
+                if self.solid[self.map_idx(x, y)] {
+                    let position = Vec2::new(
+                        x as f32 * CELL_SIZE - x_offset,
+                        y as f32 * CELL_SIZE - y_offset,
+                    );
+
+                    spawn_image!(
+                        assets,
+                        commands,
+                        "ground",
+                        position.x,
+                        position.y,
+                        -1.0,
+                        &loaded_assets,
+                        GameElement,
+                        Ground,
+                        PhysicsPosition::new(position),
+                        AxisAlignedBoundingBox::new(CELL_SIZE, CELL_SIZE)
+                    );
+                }
+            }
+        }
+    }
 }
