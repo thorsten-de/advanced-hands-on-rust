@@ -384,7 +384,7 @@ impl World {
                 let y = y as isize + offset_y;
 
                 // The checks ensure that there will always be a solid one-cell border around the map
-                if 0 < x && x < self.width as isize - 1 && 0 < y && y < self.height as isize - 1 {
+                if 0 < x && x < self.width as isize - 1 && 0 < y && y < self.height as isize {
                     let idx = self.map_idx(x as usize, y as usize);
                     self.solid[idx] = false;
                 }
