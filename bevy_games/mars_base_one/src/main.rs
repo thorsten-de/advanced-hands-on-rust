@@ -1,3 +1,6 @@
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use my_library::*;
@@ -8,6 +11,7 @@ enum GamePhase {
     #[default]
     Loading,
     MainMenu,
+    WorldBuilding,
     Playing,
     GameOver,
 }
@@ -40,6 +44,12 @@ fn main() -> anyhow::Result<()> {
        exit => [cleanup::<GameElement>]
     );
 
+    add_phase!(app, GamePhase, GamePhase::WorldBuilding,
+        start => [ spawn_builder],
+        run => [ show_builder ],
+        exit => []
+    );
+
     app.add_event::<Impulse>()
         .add_event::<PhysicsTick>()
         .add_event::<OnCollision<Player, Ground>>()
@@ -54,7 +64,7 @@ fn main() -> anyhow::Result<()> {
         .add_plugins(RandomPlugin)
         .add_plugins(GameStatePlugin::new(
             GamePhase::MainMenu,
-            GamePhase::Playing,
+            GamePhase::WorldBuilding,
             GamePhase::GameOver,
         ))
         .add_plugins(
@@ -100,7 +110,8 @@ fn setup(
         AxisAlignedBoundingBox::new(24.0, 24.0)
     );
 
-    let world = World::new(200, 200, &mut rng);
+    let mut lock = NEW_WORD.lock().unwrap();
+    let world = lock.take().unwrap();
     world.spawn(&assets, &mut commands, &loaded_assets);
     commands.insert_resource(StaticQuadTree::new(Vec2::new(10240.0, 7680.0), 6));
 }
@@ -201,6 +212,38 @@ fn bounce(
     }
 }
 
+fn spawn_builder() {
+    use std::sync::atomic::Ordering;
+
+    WORLD_READY.store(false, Ordering::Relaxed);
+
+    // Start a new world-building thread. This thread runs outside of
+    // Bevy's systems, and has no access to Bevy's DI container
+    std::thread::spawn(|| {
+        // Give the thread its own rng. So no unsafe reference must be hold
+        // between frames
+        let mut rng = my_library::RandomNumberGenerator::new();
+        // Spawn the world
+        let world = World::new(200, 200, &mut rng);
+
+        // Swap the world getting exclusive access to its mutex
+        let mut lock = NEW_WORD.lock().unwrap();
+        *lock = Some(world);
+
+        // Notify of successful finished generation
+        WORLD_READY.store(true, Ordering::Relaxed);
+    });
+}
+
+fn show_builder(mut state: ResMut<NextState<GamePhase>>, mut egui_context: egui::EguiContexts) {
+    egui::egui::Window::new("Performance").show(egui_context.ctx_mut(), |ui| {
+        ui.label("Building World");
+    });
+    if WORLD_READY.load(Ordering::Relaxed) {
+        state.set(GamePhase::Playing);
+    }
+}
+
 /// Defines the world by a 2d-matrix of cells.
 struct World {
     /// If a cell is a solid wall for each given index
@@ -213,6 +256,9 @@ struct World {
 
 const CELL_SIZE: f32 = 24.0;
 const SOLID_PERCENT: f32 = 0.6;
+
+static WORLD_READY: AtomicBool = AtomicBool::new(false);
+static NEW_WORD: Mutex<Option<World>> = Mutex::new(None);
 
 impl World {
     /// Calculates the 1d index for a given cell in the 2d matrix
