@@ -78,12 +78,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn setup(
-    mut commands: Commands,
-    assets: Res<AssetStore>,
-    loaded_assets: Res<LoadedAssets>,
-    mut rng: ResMut<RandomNumberGenerator>,
-) {
+fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<LoadedAssets>) {
     let camera = Camera2d::default();
     // This determines the transformation from world-coordinates to screen-coordinates.
     // A camera defines how the viewport is rendered to show the world. Technically, this

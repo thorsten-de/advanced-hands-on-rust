@@ -1,13 +1,10 @@
 use bevy::{
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
-    platform::collections::{HashMap, HashSet},
+    platform::collections::HashMap,
     prelude::*,
 };
 
-use my_library::{
-    egui::egui::{Color32, emath::inverse_lerp},
-    *,
-};
+use my_library::{egui::egui::Color32, *};
 pub const QUAD_TREE_DEPTH: usize = 4;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Default, States)]
@@ -43,7 +40,7 @@ fn main() -> anyhow::Result<()> {
 
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
-            title: "Naieve Collision".to_string(),
+            title: "Spatial optimized AABB Collision".to_string(),
             resolution: bevy::window::WindowResolution::new(1024.0, 768.0),
             ..default()
         }),
@@ -191,42 +188,6 @@ fn bounce_on_collision(
         absolute: false,
         source: 0,
     });
-}
-
-fn collisions_AABB(
-    mut collision_time: ResMut<CollisionTime>,
-    query: Query<(Entity, &Transform, &AxisAlignedBoundingBox)>,
-    mut impulse: EventWriter<Impulse>,
-    quad_tree: Res<StaticQuadTree>,
-) {
-    // Start the clock
-    let now = std::time::Instant::now();
-
-    // AABB Collision
-    let mut n = 0;
-
-    for (entity_a, ball_a, box_a) in query.iter() {
-        let box_a = box_a.as_rect(ball_a.translation.truncate());
-
-        for (entity_b, ball_b, box_b) in query.iter() {
-            if entity_a != entity_b {
-                let box_b = box_b.as_rect(ball_b.translation.truncate());
-                if box_a.intersect(&box_b) {
-                    bounce_on_collision(
-                        entity_a,
-                        ball_a.translation,
-                        ball_b.translation,
-                        &mut impulse,
-                    );
-                }
-                n += 1;
-            }
-        }
-    }
-
-    // Store the time result
-    collision_time.time = now.elapsed().as_millis();
-    collision_time.checks = n;
 }
 
 fn collisions(

@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_egui::egui::frame;
 
 // How frequently should the physics tick fire (ms)
 const PHYSICS_TICK_TIME: u128 = 33;
