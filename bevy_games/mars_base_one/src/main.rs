@@ -106,7 +106,8 @@ fn setup(
         GameElement,
         Player,
         Velocity::default(),
-        PhysicsPosition::new(Vec2::new(0.0, 0.0)), // ApplyGravity,
+        PhysicsPosition::new(Vec2::new(0.0, 0.0)),
+        ApplyGravity,
         AxisAlignedBoundingBox::new(24.0, 24.0)
     );
 
