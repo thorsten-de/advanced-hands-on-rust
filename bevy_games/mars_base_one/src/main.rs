@@ -298,7 +298,7 @@ struct World {
     tile_positions: Vec<(f32, f32)>,
 }
 
-const CELL_SIZE: f32 = 24.0;
+const TILE_SIZE: f32 = 24.0;
 const SOLID_PERCENT: f32 = 0.6;
 
 static WORLD_READY: AtomicBool = AtomicBool::new(false);
@@ -422,7 +422,7 @@ impl World {
                 .insert(GameElement)
                 .insert(Ground)
                 .insert(PhysicsPosition::new(Vec2::new(*x, *y)))
-                .insert(AxisAlignedBoundingBox::new(CELL_SIZE, CELL_SIZE));
+                .insert(AxisAlignedBoundingBox::new(TILE_SIZE, TILE_SIZE));
         }
     }
 
@@ -466,16 +466,16 @@ impl World {
         let mut uv = Vec::new();
         let mut tile_positions = Vec::new();
 
-        let x_offset = self.width as f32 / 2.0 * CELL_SIZE;
-        let y_offset = self.height as f32 * CELL_SIZE;
+        let x_offset = self.width as f32 / 2.0 * TILE_SIZE;
+        let y_offset = self.height as f32 / 2.0 * TILE_SIZE;
 
         for y in 0..self.height {
             for x in 0..self.width {
                 if self.solid[self.map_idx(x, y)] {
-                    let left = x as f32 * CELL_SIZE - x_offset;
-                    let right = (x as f32 + 1.0) * CELL_SIZE - x_offset;
-                    let top = y as f32 * CELL_SIZE - y_offset;
-                    let bottom = (y as f32 + 1.0) * CELL_SIZE - y_offset;
+                    let left = x as f32 * TILE_SIZE - x_offset;
+                    let right = (x as f32 + 1.0) * TILE_SIZE - x_offset;
+                    let top = y as f32 * TILE_SIZE - y_offset;
+                    let bottom = (y as f32 + 1.0) * TILE_SIZE - y_offset;
 
                     position.push([left, bottom, 1.0]);
                     position.push([right, bottom, 1.0]);
@@ -491,10 +491,30 @@ impl World {
                     uv.push([0.0, 1.0]);
                     uv.push([0.0, 0.0]);
 
-                    tile_positions.push((left + CELL_SIZE / 2.0, top + CELL_SIZE / 2.0));
+                    let mut needs_physics = false;
+
+                    // Only enable physics on tiles that are on the edge or not
+                    // completely surronded by solid tiles
+
+                    if x == 0 || x > self.width - 3 || y == 0 || y > self.height - 3 {
+                        needs_physics = true;
+                    } else {
+                        let solid_count = self.solid[self.map_idx(x - 1, y)] as u8
+                            + self.solid[self.map_idx(x + 1, y)] as u8
+                            + self.solid[self.map_idx(x, y - 1)] as u8
+                            + self.solid[self.map_idx(x, y + 1)] as u8;
+
+                        needs_physics = solid_count < 4;
+                    }
+
+                    if needs_physics {
+                        tile_positions.push((left + TILE_SIZE / 2.0, top + TILE_SIZE / 2.0));
+                    }
                 }
             }
         }
+
+        info!("{} tiles need physics", tile_positions.len());
 
         (
             Mesh::new(
