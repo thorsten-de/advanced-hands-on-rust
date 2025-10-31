@@ -1,8 +1,13 @@
+use std::os::unix::raw::off_t;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use bevy::asset::RenderAssetUsages;
+use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
+use bevy::render::mesh::PrimitiveTopology;
+use my_library::egui::egui::Color32;
 use my_library::*;
 
 /// Game Phases for Mars Base One
@@ -39,7 +44,7 @@ fn main() -> anyhow::Result<()> {
        start => [ setup ],
        run => [movement, end_game, physics_clock, sum_impulses, apply_gravity, apply_velocity,
         cap_velocity.after(apply_velocity),
-        check_collisions::<Player, Ground>, bounce,
+        check_collisions::<Player, Ground>, bounce, show_performance,
         camera_follow.after(cap_velocity)],
        exit => [cleanup::<GameElement>]
     );
@@ -72,13 +77,20 @@ fn main() -> anyhow::Result<()> {
                 .add_image("ship", "ship.png")?
                 .add_image("ground", "ground.png")?,
         )
+        .add_plugins(FrameTimeDiagnosticsPlugin { ..default() })
         .insert_resource(Animations::new())
         .run();
 
     Ok(())
 }
 
-fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<LoadedAssets>) {
+fn setup(
+    mut commands: Commands,
+    assets: Res<AssetStore>,
+    loaded_assets: Res<LoadedAssets>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     let camera = Camera2d::default();
     // This determines the transformation from world-coordinates to screen-coordinates.
     // A camera defines how the viewport is rendered to show the world. Technically, this
@@ -108,7 +120,13 @@ fn setup(mut commands: Commands, assets: Res<AssetStore>, loaded_assets: Res<Loa
 
     let mut lock = NEW_WORD.lock().unwrap();
     let world = lock.take().unwrap();
-    world.spawn(&assets, &mut commands, &loaded_assets);
+    world.spawn(
+        &assets,
+        &mut commands,
+        &loaded_assets,
+        &mut meshes,
+        &mut materials,
+    );
     commands.insert_resource(StaticQuadTree::new(Vec2::new(10240.0, 7680.0), 6));
 }
 
@@ -220,11 +238,15 @@ fn spawn_builder() {
         // between frames
         let mut rng = my_library::RandomNumberGenerator::new();
         // Spawn the world
+        info!("Start building the world.");
+
         let world = World::new(200, 200, &mut rng);
 
         // Swap the world getting exclusive access to its mutex
         let mut lock = NEW_WORD.lock().unwrap();
         *lock = Some(world);
+
+        info!("Finished building the world.");
 
         // Notify of successful finished generation
         WORLD_READY.store(true, Ordering::Relaxed);
@@ -240,14 +262,40 @@ fn show_builder(mut state: ResMut<NextState<GamePhase>>, mut egui_context: egui:
     }
 }
 
-/// Defines the world by a 2d-matrix of cells.
+fn show_performance(
+    mut egui_context: egui::EguiContexts,
+    diagnostics: Res<DiagnosticsStore>, // get bevys diagnostic informations as a resource from DI
+    mut commands: Commands,
+) {
+    let fps = diagnostics // get diagnostical information about the average fps of recent frames
+        .get(&FrameTimeDiagnosticsPlugin::FPS)
+        .and_then(|fps| fps.average())
+        .unwrap_or(0.0);
+
+    egui::egui::Window::new("Performance").show(egui_context.ctx_mut(), |ui| {
+        let fps_text = format!("FPS: {fps:.1}"); // format fps with one decimal place
+        let color = match fps as u32 {
+            // color scale for fps ranges
+            0..=29 => Color32::RED,
+            30..=50 => Color32::GOLD,
+            _ => Color32::GREEN,
+        };
+        ui.colored_label(color, &fps_text);
+    });
+}
+
+/// Defines the world by a 2d-matrix of tiles.
 struct World {
-    /// If a cell is a solid wall for each given index
+    /// If a tile is a solid wall for each given index
     solid: Vec<bool>,
     /// Horizontal map size
     width: usize,
     /// Vertical map size
     height: usize,
+    /// The mesh representing each tile
+    mesh: Option<Mesh>,
+    /// The position of each tile
+    tile_positions: Vec<(f32, f32)>,
 }
 
 const CELL_SIZE: f32 = 24.0;
@@ -268,6 +316,8 @@ impl World {
             width,
             height,
             solid: vec![true; width * height],
+            mesh: None,
+            tile_positions: Vec::new(),
         };
 
         result.clear_tiles(width / 2, height / 2);
@@ -295,6 +345,10 @@ impl World {
         }
 
         result.outward_diffusion(&holes, rng);
+
+        let (mesh, tile_positions) = result.build_mesh();
+        result.mesh = Some(mesh);
+        result.tile_positions = tile_positions;
 
         result
     }
@@ -343,33 +397,32 @@ impl World {
     }
 
     /// Spawns the world into the game
-    fn spawn(&self, assets: &AssetStore, commands: &mut Commands, loaded_assets: &LoadedAssets) {
-        let x_offset = self.width as f32 * CELL_SIZE / 2.0;
-        let y_offset = self.height as f32 * CELL_SIZE / 2.0;
+    fn spawn(
+        &self,
+        assets: &AssetStore,
+        commands: &mut Commands,
+        loaded_assets: &LoadedAssets,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<ColorMaterial>,
+    ) {
+        let mesh = self.mesh.as_ref().unwrap().clone();
+        let mesh_handle = meshes.add(mesh);
+        let material_handle = materials.add(ColorMaterial {
+            texture: Some(assets.get_handle("ground", loaded_assets).unwrap()),
+            ..default()
+        });
+        commands
+            .spawn(Mesh2d(mesh_handle))
+            .insert(MeshMaterial2d(material_handle))
+            .insert(Transform::from_xyz(0.0, 0.0, 0.0));
 
-        for y in 0..self.height {
-            for x in 0..self.width {
-                if self.solid[self.map_idx(x, y)] {
-                    let position = Vec2::new(
-                        x as f32 * CELL_SIZE - x_offset,
-                        y as f32 * CELL_SIZE - y_offset,
-                    );
-
-                    spawn_image!(
-                        assets,
-                        commands,
-                        "ground",
-                        position.x,
-                        position.y,
-                        -1.0,
-                        &loaded_assets,
-                        GameElement,
-                        Ground,
-                        PhysicsPosition::new(position),
-                        AxisAlignedBoundingBox::new(CELL_SIZE, CELL_SIZE)
-                    );
-                }
-            }
+        for (x, y) in self.tile_positions.iter() {
+            commands
+                .spawn_empty()
+                .insert(GameElement)
+                .insert(Ground)
+                .insert(PhysicsPosition::new(Vec2::new(*x, *y)))
+                .insert(AxisAlignedBoundingBox::new(CELL_SIZE, CELL_SIZE));
         }
     }
 
@@ -406,5 +459,51 @@ impl World {
             x += slope_x;
             y += slope_y;
         }
+    }
+
+    fn build_mesh(&self) -> (Mesh, Vec<(f32, f32)>) {
+        let mut position = Vec::new();
+        let mut uv = Vec::new();
+        let mut tile_positions = Vec::new();
+
+        let x_offset = self.width as f32 / 2.0 * CELL_SIZE;
+        let y_offset = self.height as f32 * CELL_SIZE;
+
+        for y in 0..self.height {
+            for x in 0..self.width {
+                if self.solid[self.map_idx(x, y)] {
+                    let left = x as f32 * CELL_SIZE - x_offset;
+                    let right = (x as f32 + 1.0) * CELL_SIZE - x_offset;
+                    let top = y as f32 * CELL_SIZE - y_offset;
+                    let bottom = (y as f32 + 1.0) * CELL_SIZE - y_offset;
+
+                    position.push([left, bottom, 1.0]);
+                    position.push([right, bottom, 1.0]);
+                    position.push([right, top, 1.0]);
+                    position.push([right, top, 1.0]);
+                    position.push([left, bottom, 1.0]);
+                    position.push([left, top, 1.0]);
+
+                    uv.push([0.0, 1.0]);
+                    uv.push([1.0, 1.0]);
+                    uv.push([1.0, 0.0]);
+                    uv.push([1.0, 0.0]);
+                    uv.push([0.0, 1.0]);
+                    uv.push([0.0, 0.0]);
+
+                    tile_positions.push((left + CELL_SIZE / 2.0, top + CELL_SIZE / 2.0));
+                }
+            }
+        }
+
+        (
+            Mesh::new(
+                PrimitiveTopology::TriangleList,
+                RenderAssetUsages::default(),
+            )
+            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, position)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uv),
+            tile_positions,
+        )
     }
 }
