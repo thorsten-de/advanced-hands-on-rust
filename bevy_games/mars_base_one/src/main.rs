@@ -75,7 +75,8 @@ fn main() -> anyhow::Result<()> {
         .add_plugins(
             AssetManager::new()
                 .add_image("ship", "ship.png")?
-                .add_image("ground", "ground.png")?,
+                .add_image("ground", "ground.png")?
+                .add_image("backdrop", "backdrop.png")?,
         )
         .add_plugins(FrameTimeDiagnosticsPlugin { ..default() })
         .insert_resource(Animations::new())
@@ -97,7 +98,7 @@ fn setup(
     // is done with a *projection matrix*.
     let projection = Projection::Orthographic(OrthographicProjection {
         scaling_mode: ScalingMode::WindowSize,
-        scale: 0.5,
+        scale: 1.0,
         ..OrthographicProjection::default_2d()
     });
     commands.spawn((camera, projection, GameElement, MyCamera));
@@ -117,6 +118,21 @@ fn setup(
         ApplyGravity,
         AxisAlignedBoundingBox::new(24.0, 24.0)
     );
+
+    let x_scale = WORLD_SIZE as f32 * TILE_SIZE / 1792.0;
+    let y_scale = (WORLD_SIZE as f32 + TOP_MARGIN) * TILE_SIZE / 1024.0;
+
+    let center_x = 0.0; // as f32 * TILE_SIZE - WORLD_SIZE as f32 / 2.0 * TILE_SIZE;
+    let center_y = TOP_MARGIN / 2.0 * TILE_SIZE; // as f32 * TILE_SIZE - WORLD_SIZE as f32 / 2.0 * TILE_SIZE;
+
+    let mut transform = Transform::from_xyz(center_x, center_y, -10.0);
+    transform.scale = Vec3::new(x_scale, y_scale, 1.0);
+    commands
+        .spawn(Sprite::from_image(
+            assets.get_handle("backdrop", &loaded_assets).unwrap(),
+        ))
+        .insert(transform)
+        .insert(GameElement);
 
     let mut lock = NEW_WORD.lock().unwrap();
     let world = lock.take().unwrap();
@@ -226,6 +242,9 @@ fn bounce(
     }
 }
 
+const WORLD_SIZE: usize = 200;
+const TOP_MARGIN: f32 = 40.0;
+
 fn spawn_builder() {
     use std::sync::atomic::Ordering;
 
@@ -240,7 +259,7 @@ fn spawn_builder() {
         // Spawn the world
         info!("Start building the world.");
 
-        let world = World::new(200, 200, &mut rng);
+        let world = World::new(WORLD_SIZE, WORLD_SIZE, &mut rng);
 
         // Swap the world getting exclusive access to its mutex
         let mut lock = NEW_WORD.lock().unwrap();
