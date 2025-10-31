@@ -1,4 +1,3 @@
-use std::os::unix::raw::off_t;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -37,6 +36,24 @@ struct MyCamera;
 #[derive(Component)]
 struct Ground;
 
+/// Event that defines the spawning of new particles
+#[derive(Event)]
+pub struct SpawnParticle {
+    // Pposition of the particle
+    position: Vec2,
+    /// Color of the Particle
+    color: LinearRgba,
+    /// Velocity (and therefore direction) of the moving particle
+    velocity: Vec3,
+}
+
+// A component that designates a particle entity
+#[derive(Component)]
+pub struct Particle {
+    /// How log does it take for a particle to fade away?
+    pub lifetime: f32,
+}
+
 fn main() -> anyhow::Result<()> {
     let mut app = App::new();
 
@@ -45,7 +62,8 @@ fn main() -> anyhow::Result<()> {
        run => [movement, end_game, physics_clock, sum_impulses, apply_gravity, apply_velocity,
         cap_velocity.after(apply_velocity),
         check_collisions::<Player, Ground>, bounce, show_performance,
-        camera_follow.after(cap_velocity)],
+        camera_follow.after(cap_velocity),
+        spawn_particle_system, particle_age_system],
        exit => [cleanup::<GameElement>]
     );
 
@@ -58,6 +76,7 @@ fn main() -> anyhow::Result<()> {
     app.add_event::<Impulse>()
         .add_event::<PhysicsTick>()
         .add_event::<OnCollision<Player, Ground>>()
+        .add_event::<SpawnParticle>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Mars Base One".to_string(),
@@ -77,7 +96,8 @@ fn main() -> anyhow::Result<()> {
                 .add_image("ship", "ship.png")?
                 .add_image("ground", "ground.png")?
                 .add_image("backdrop", "backdrop.png")?
-                .add_image("mothership", "mothership.png")?,
+                .add_image("mothership", "mothership.png")?
+                .add_image("particle", "particle.png")?,
         )
         .add_plugins(FrameTimeDiagnosticsPlugin { ..default() })
         .insert_resource(Animations::new())
@@ -99,7 +119,7 @@ fn setup(
     // is done with a *projection matrix*.
     let projection = Projection::Orthographic(OrthographicProjection {
         scaling_mode: ScalingMode::WindowSize,
-        scale: 1.0,
+        scale: 0.5,
         ..OrthographicProjection::default_2d()
     });
     commands.spawn((camera, projection, GameElement, MyCamera));
@@ -177,19 +197,36 @@ fn end_game(
     }
 }
 
+fn spawn_particle(
+    particles: &mut EventWriter<SpawnParticle>,
+    direction: &Dir3,
+    transform: &Transform,
+) {
+    particles.write(SpawnParticle {
+        position: direction.truncate()
+            + Vec2::new(transform.translation.x, transform.translation.y),
+        color: LinearRgba::new(0.0, 1.0, 1.0, 1.0),
+        velocity: -direction.as_vec3(),
+    });
+}
+
 fn movement(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<(Entity, &mut Transform), With<Player>>,
     mut impulses: EventWriter<Impulse>,
+    mut particles: EventWriter<SpawnParticle>,
 ) {
     let Ok((entity, mut transform)) = player_query.single_mut() else {
         return;
     };
+
     if keyboard.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]) {
         transform.rotate(Quat::from_rotation_z(f32::to_radians(2.0)));
+        spawn_particle(&mut particles, &-transform.local_x(), &transform);
     }
     if keyboard.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]) {
         transform.rotate(Quat::from_rotation_z(f32::to_radians(-2.0)));
+        spawn_particle(&mut particles, &transform.local_x(), &transform);
     }
     if keyboard.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]) {
         impulses.write(Impulse {
@@ -198,6 +235,7 @@ fn movement(
             absolute: false,
             source: 1,
         });
+        spawn_particle(&mut particles, &transform.local_y(), &transform);
     }
 }
 
@@ -256,6 +294,42 @@ fn bounce(
     }
 }
 
+fn spawn_particle_system(
+    mut commands: Commands,
+    mut reader: EventReader<SpawnParticle>,
+    assets: Res<AssetStore>,
+    loaded_assets: Res<LoadedAssets>,
+) {
+    for particle in reader.read() {
+        let mut sprite = Sprite::from_image(assets.get_handle("particle", &loaded_assets).unwrap());
+        sprite.color = particle.color.into();
+
+        commands.spawn((
+            sprite,
+            Transform::from_xyz(particle.position.x, particle.position.y, 5.0),
+            GameElement,
+            Particle { lifetime: 2.0 },
+            Velocity(particle.velocity),
+            PhysicsPosition::new(particle.position),
+        ));
+    }
+}
+
+fn particle_age_system(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Particle, &mut Sprite)>,
+) {
+    for (entity, mut particle, mut sprite) in query.iter_mut() {
+        particle.lifetime -= time.delta_secs();
+        if particle.lifetime <= 0.0 {
+            commands.entity(entity).despawn();
+        }
+
+        sprite.color.set_alpha(particle.lifetime / 2.0);
+    }
+}
+
 const WORLD_SIZE: usize = 200;
 const TOP_MARGIN: f32 = 60.0;
 
@@ -298,7 +372,6 @@ fn show_builder(mut state: ResMut<NextState<GamePhase>>, mut egui_context: egui:
 fn show_performance(
     mut egui_context: egui::EguiContexts,
     diagnostics: Res<DiagnosticsStore>, // get bevys diagnostic informations as a resource from DI
-    mut commands: Commands,
 ) {
     let fps = diagnostics // get diagnostical information about the average fps of recent frames
         .get(&FrameTimeDiagnosticsPlugin::FPS)
@@ -524,7 +597,7 @@ impl World {
                     uv.push([0.0, 1.0]);
                     uv.push([0.0, 0.0]);
 
-                    let mut needs_physics = false;
+                    let needs_physics;
 
                     // Only enable physics on tiles that are on the edge or not
                     // completely surronded by solid tiles
