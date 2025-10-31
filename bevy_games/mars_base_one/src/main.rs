@@ -76,7 +76,8 @@ fn main() -> anyhow::Result<()> {
             AssetManager::new()
                 .add_image("ship", "ship.png")?
                 .add_image("ground", "ground.png")?
-                .add_image("backdrop", "backdrop.png")?,
+                .add_image("backdrop", "backdrop.png")?
+                .add_image("mothership", "mothership.png")?,
         )
         .add_plugins(FrameTimeDiagnosticsPlugin { ..default() })
         .insert_resource(Animations::new())
@@ -103,20 +104,33 @@ fn setup(
     });
     commands.spawn((camera, projection, GameElement, MyCamera));
 
+    let top = WORLD_SIZE as f32 / 2.0 * TILE_SIZE;
+
     spawn_image!(
         assets,
         commands,
         "ship",
         0.0,
-        0.0,
-        1.0,
+        200.0 + top,
+        10.0,
         &loaded_assets,
         GameElement,
         Player,
         Velocity::default(),
-        PhysicsPosition::new(Vec2::new(0.0, 0.0)),
+        PhysicsPosition::new(Vec2::new(0.0, 200.0 + top)),
         ApplyGravity,
         AxisAlignedBoundingBox::new(24.0, 24.0)
+    );
+
+    spawn_image!(
+        assets,
+        commands,
+        "mothership",
+        0.0,
+        400.0 + top,
+        10.0,
+        &loaded_assets,
+        GameElement
     );
 
     let x_scale = WORLD_SIZE as f32 * TILE_SIZE / 1792.0;
@@ -243,7 +257,7 @@ fn bounce(
 }
 
 const WORLD_SIZE: usize = 200;
-const TOP_MARGIN: f32 = 40.0;
+const TOP_MARGIN: f32 = 60.0;
 
 fn spawn_builder() {
     use std::sync::atomic::Ordering;
