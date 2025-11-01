@@ -2,6 +2,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use bevy::asset::RenderAssetUsages;
+use bevy::asset::io::MissingAssetWriterError;
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
@@ -35,6 +36,18 @@ struct MyCamera;
 /// Component to tag ground entities
 #[derive(Component)]
 struct Ground;
+
+/// A component to tag miner entities
+#[derive(Component)]
+struct Miner;
+
+/// A component to tag shield power-ups
+#[derive(Component)]
+struct Battery;
+
+/// Component to tag fuel power-ups
+#[derive(Component)]
+struct Fuel;
 
 /// Event that defines the spawning of new particles
 #[derive(Event)]
@@ -97,7 +110,10 @@ fn main() -> anyhow::Result<()> {
                 .add_image("ground", "ground.png")?
                 .add_image("backdrop", "backdrop.png")?
                 .add_image("mothership", "mothership.png")?
-                .add_image("particle", "particle.png")?,
+                .add_image("particle", "particle.png")?
+                .add_image("spaceman", "spaceman.png")?
+                .add_image("fuel", "fuel.png")?
+                .add_image("battery", "battery.png")?,
         )
         .add_plugins(FrameTimeDiagnosticsPlugin { ..default() })
         .insert_resource(Animations::new())
@@ -347,7 +363,11 @@ fn spawn_builder() {
         // Spawn the world
         info!("Start building the world.");
 
-        let world = World::new(WORLD_SIZE, WORLD_SIZE, &mut rng);
+        let mut world = World::new(WORLD_SIZE, WORLD_SIZE, &mut rng);
+
+        // Shuffle possible miner positions and limit the size to 20
+        use my_library::rand::seq::SliceRandom;
+        world.spawn_positions.shuffle(&mut rng.rng);
 
         // Swap the world getting exclusive access to its mutex
         let mut lock = NEW_WORD.lock().unwrap();
@@ -402,6 +422,8 @@ struct World {
     mesh: Option<Mesh>,
     /// The position of each tile
     tile_positions: Vec<(f32, f32)>,
+    /// Positions on which entites can be spawned
+    spawn_positions: Vec<(f32, f32)>,
 }
 
 const TILE_SIZE: f32 = 24.0;
@@ -424,6 +446,7 @@ impl World {
             solid: vec![true; width * height],
             mesh: None,
             tile_positions: Vec::new(),
+            spawn_positions: Vec::new(),
         };
 
         result.clear_tiles(width / 2, height / 2);
@@ -452,9 +475,10 @@ impl World {
 
         result.outward_diffusion(&holes, rng);
 
-        let (mesh, tile_positions) = result.build_mesh();
+        let (mesh, tile_positions, spawn_positions) = result.build_mesh();
         result.mesh = Some(mesh);
         result.tile_positions = tile_positions;
+        result.spawn_positions = spawn_positions;
 
         result
     }
@@ -530,6 +554,56 @@ impl World {
                 .insert(PhysicsPosition::new(Vec2::new(*x, *y)))
                 .insert(AxisAlignedBoundingBox::new(TILE_SIZE, TILE_SIZE));
         }
+        for (x, y) in self.spawn_positions.iter().take(20) {
+            spawn_image!(
+                assets,
+                commands,
+                "spaceman",
+                *x,
+                *y,
+                10.0,
+                loaded_assets,
+                GameElement,
+                Miner,
+                Velocity::default(),
+                PhysicsPosition::new(Vec2::new(*x, *y)),
+                AxisAlignedBoundingBox::new(48.0, 48.0)
+            );
+        }
+
+        for (x, y) in self.spawn_positions.iter().skip(20).take(20) {
+            spawn_image!(
+                assets,
+                commands,
+                "fuel",
+                *x,
+                *y,
+                10.0,
+                loaded_assets,
+                GameElement,
+                Fuel,
+                Velocity::default(),
+                PhysicsPosition::new(Vec2::new(*x, *y)),
+                AxisAlignedBoundingBox::new(48.0, 48.0)
+            );
+        }
+
+        for (x, y) in self.spawn_positions.iter().skip(40).take(20) {
+            spawn_image!(
+                assets,
+                commands,
+                "battery",
+                *x,
+                *y,
+                10.0,
+                loaded_assets,
+                GameElement,
+                Battery,
+                Velocity::default(),
+                PhysicsPosition::new(Vec2::new(*x, *y)),
+                AxisAlignedBoundingBox::new(48.0, 48.0)
+            );
+        }
     }
 
     fn clear_tiles(&mut self, x: usize, y: usize) {
@@ -567,22 +641,22 @@ impl World {
         }
     }
 
-    fn build_mesh(&self) -> (Mesh, Vec<(f32, f32)>) {
+    fn build_mesh(&self) -> (Mesh, Vec<(f32, f32)>, Vec<(f32, f32)>) {
         let mut position = Vec::new();
         let mut uv = Vec::new();
         let mut tile_positions = Vec::new();
+        let mut possible_miner_positions = Vec::new();
 
         let x_offset = self.width as f32 / 2.0 * TILE_SIZE;
         let y_offset = self.height as f32 / 2.0 * TILE_SIZE;
 
         for y in 0..self.height {
             for x in 0..self.width {
+                let left = x as f32 * TILE_SIZE - x_offset;
+                let right = (x as f32 + 1.0) * TILE_SIZE - x_offset;
+                let top = y as f32 * TILE_SIZE - y_offset;
+                let bottom = (y as f32 + 1.0) * TILE_SIZE - y_offset;
                 if self.solid[self.map_idx(x, y)] {
-                    let left = x as f32 * TILE_SIZE - x_offset;
-                    let right = (x as f32 + 1.0) * TILE_SIZE - x_offset;
-                    let top = y as f32 * TILE_SIZE - y_offset;
-                    let bottom = (y as f32 + 1.0) * TILE_SIZE - y_offset;
-
                     position.push([left, bottom, 1.0]);
                     position.push([right, bottom, 1.0]);
                     position.push([right, top, 1.0]);
@@ -616,6 +690,16 @@ impl World {
                     if needs_physics {
                         tile_positions.push((left + TILE_SIZE / 2.0, top + TILE_SIZE / 2.0));
                     }
+                } else {
+                    if x > 1
+                        && x < self.width - 3
+                        && y > 1
+                        && y < self.height - 3
+                        && self.solid[self.map_idx(x, y - 1)]
+                    {
+                        possible_miner_positions
+                            .push((left + TILE_SIZE / 2.0, top + TILE_SIZE / 2.0));
+                    }
                 }
             }
         }
@@ -630,6 +714,7 @@ impl World {
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, position)
             .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uv),
             tile_positions,
+            possible_miner_positions,
         )
     }
 }

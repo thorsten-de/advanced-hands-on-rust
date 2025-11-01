@@ -36,7 +36,7 @@ type RngCore = rand_pcg::Pcg64Mcg;
 /// println!("{random_number}")
 /// ```
 pub struct RandomNumberGenerator {
-    rng: Mutex<RngCore>,
+    pub rng: Mutex<RngCore>,
 }
 
 impl RandomNumberGenerator {

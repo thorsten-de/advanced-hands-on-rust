@@ -34,7 +34,7 @@ type RngCore = rand_pcg::Pcg64Mcg;
 /// ```
 #[derive(bevy::prelude::Resource)]
 pub struct RandomNumberGenerator {
-    rng: RngCore,
+    pub rng: RngCore,
 }
 
 impl RandomNumberGenerator {
