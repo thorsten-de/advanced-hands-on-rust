@@ -27,7 +27,14 @@ struct GameElement;
 
 /// Component that identifies the player entity
 #[derive(Component)]
-struct Player;
+struct Player {
+    /// Number of miners that ware rescued
+    miners_saved: u32,
+    /// Current shield level
+    shields: i32,
+    /// Current fuel level
+    fuel: i32,
+}
 
 /// Component representing the camera tag
 #[derive(Component)]
@@ -74,7 +81,7 @@ fn main() -> anyhow::Result<()> {
        start => [ setup ],
        run => [movement, end_game, physics_clock, sum_impulses, apply_gravity, apply_velocity,
         cap_velocity.after(apply_velocity),
-        check_collisions::<Player, Ground>, bounce, show_performance,
+        check_collisions::<Player, Ground>, bounce, show_performance, score_display,
         camera_follow.after(cap_velocity),
         spawn_particle_system, particle_age_system],
        exit => [cleanup::<GameElement>]
@@ -151,7 +158,11 @@ fn setup(
         10.0,
         &loaded_assets,
         GameElement,
-        Player,
+        Player {
+            miners_saved: 0,
+            shields: 500,
+            fuel: 100_000
+        },
         Velocity::default(),
         PhysicsPosition::new(Vec2::new(0.0, 200.0 + top)),
         ApplyGravity,
@@ -407,6 +418,17 @@ fn show_performance(
             _ => Color32::GREEN,
         };
         ui.colored_label(color, &fps_text);
+    });
+}
+
+fn score_display(player: Query<&Player>, mut egui_context: egui::EguiContexts) {
+    let Ok(player) = player.single() else {
+        return;
+    };
+    egui::egui::Window::new("Score").show(egui_context.ctx_mut(), |ui| {
+        ui.label(format!("Miners Saved: {}", player.miners_saved));
+        ui.label(format!("Shields: {}", player.shields));
+        ui.label(format!("Fuel: {}", player.fuel));
     });
 }
 
