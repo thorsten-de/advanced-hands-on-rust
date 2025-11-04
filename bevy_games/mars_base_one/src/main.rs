@@ -82,8 +82,13 @@ fn main() -> anyhow::Result<()> {
         cap_velocity.after(apply_velocity),
         check_collisions::<Player, Ground>, bounce, show_performance, score_display,
         camera_follow.after(cap_velocity),
-        spawn_particle_system, particle_age_system,
-        miner_beacon
+        spawn_particle_system, particle_age_system, miner_beacon,
+        check_collisions::<Player, Miner>,
+        check_collisions::<Player, Fuel>,
+        check_collisions::<Player, Battery>,
+        collect_and_despawn_game_element::<Miner,  { BurstColor:: Green as u8 }>,
+        collect_and_despawn_game_element::<Fuel,  { BurstColor:: Orange as u8 }>,
+        collect_and_despawn_game_element::<Battery,  { BurstColor::Magenta as u8 }>
         ],
        exit => [cleanup::<GameElement>]
     );
@@ -97,6 +102,9 @@ fn main() -> anyhow::Result<()> {
     app.add_event::<Impulse>()
         .add_event::<PhysicsTick>()
         .add_event::<OnCollision<Player, Ground>>()
+        .add_event::<OnCollision<Player, Miner>>()
+        .add_event::<OnCollision<Player, Fuel>>()
+        .add_event::<OnCollision<Player, Battery>>()
         .add_event::<SpawnParticle>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -773,5 +781,88 @@ impl World {
             tile_positions,
             possible_miner_positions,
         )
+    }
+}
+
+/// A trait for collecting things for the player
+trait OnCollect {
+    /// The effect of collecting a particular thing
+    fn effect(player: &mut Player);
+}
+
+impl OnCollect for Miner {
+    fn effect(player: &mut Player) {
+        player.miners_saved += 1;
+    }
+}
+
+impl OnCollect for Fuel {
+    fn effect(player: &mut Player) {
+        player.fuel += 1000;
+    }
+}
+
+impl OnCollect for Battery {
+    fn effect(player: &mut Player) {
+        player.shields += 100;
+    }
+}
+
+#[repr(u8)]
+enum BurstColor {
+    Green,
+    Orange,
+    Magenta,
+}
+
+impl From<u8> for BurstColor {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => BurstColor::Green,
+            1 => BurstColor::Orange,
+            2 => BurstColor::Magenta,
+            _ => panic!("Invalid BurstColor value"),
+        }
+    }
+}
+
+impl Into<LinearRgba> for BurstColor {
+    fn into(self) -> LinearRgba {
+        match self {
+            BurstColor::Green => LinearRgba::new(0.0, 1.0, 0.0, 1.0),
+            BurstColor::Orange => LinearRgba::new(1.0, 0.5, 0.0, 1.0),
+            BurstColor::Magenta => LinearRgba::new(1.0, 0.0, 1.0, 1.0),
+        }
+    }
+}
+
+fn collect_and_despawn_game_element<T: Component + OnCollect, const COLOR: u8>(
+    mut collisions: EventReader<OnCollision<Player, T>>,
+    mut commands: Commands,
+    mut player: Query<(&mut Player, &Transform)>,
+    mut spawn: EventWriter<SpawnParticle>,
+) {
+    let mut collected = Vec::new();
+    for collision in collisions.read() {
+        collected.push(collision.entity_b);
+    }
+
+    let Ok((mut player, player_pos)) = player.single_mut() else {
+        return;
+    };
+    for miner in collected.iter() {
+        if commands.get_entity(*miner).is_ok() {
+            commands.entity(*miner).despawn();
+        }
+        T::effect(&mut player);
+    }
+
+    if !collected.is_empty() {
+        particle_burst(
+            player_pos.translation.truncate(),
+            BurstColor::from(COLOR).into(),
+            &mut spawn,
+            2.0,
+        );
     }
 }
