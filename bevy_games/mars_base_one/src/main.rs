@@ -216,19 +216,12 @@ fn setup(
     commands.insert_resource(StaticQuadTree::new(Vec2::new(10240.0, 7680.0), 6));
 }
 
-fn end_game(
-    mut state: ResMut<NextState<GamePhase>>,
-    player_query: Query<&Transform, With<Player>>,
-) {
-    let Ok(transform) = player_query.single() else {
+fn end_game(mut state: ResMut<NextState<GamePhase>>, player_query: Query<&Player>) {
+    let Ok(player) = player_query.single() else {
         return;
     };
-    if false
-        && (transform.translation.y < -384.0
-            || transform.translation.y > 384.0
-            || transform.translation.x < -512.0
-            || transform.translation.x > 512.0)
-    {
+
+    if player.miners_saved == 20 {
         state.set(GamePhase::GameOver);
     }
 }
