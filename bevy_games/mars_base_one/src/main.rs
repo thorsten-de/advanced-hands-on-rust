@@ -302,18 +302,20 @@ fn camera_follow(
 
 fn bounce(
     mut collisions: EventReader<OnCollision<Player, Ground>>,
-    mut player_query: Query<&PhysicsPosition, With<Player>>,
+    mut player_query: Query<(&PhysicsPosition, &mut Player)>,
     ground_query: Query<&PhysicsPosition, With<Ground>>,
     mut impulses: EventWriter<Impulse>,
+    mut particles: EventWriter<SpawnParticle>,
+    mut state: ResMut<NextState<GamePhase>>,
 ) {
     let mut bounce = Vec2::default();
     let mut entity = None;
     let mut bounces = 0;
     for collision in collisions.read() {
-        if let Ok(player) = player_query.single_mut() {
+        if let Ok((player_pos, _)) = player_query.single_mut() {
             if let Ok(ground) = ground_query.get(collision.entity_b) {
                 entity = Some(collision.entity_a);
-                let difference = player.start_frame - ground.start_frame;
+                let difference = player_pos.start_frame - ground.start_frame;
                 bounces += 1;
                 bounce += difference;
             }
@@ -327,6 +329,20 @@ fn bounce(
             absolute: true,
             source: 2,
         });
+
+        let Ok((player_pos, mut player)) = player_query.single_mut() else {
+            return;
+        };
+        particle_burst(
+            player_pos.end_frame,
+            LinearRgba::new(0.0, 0.0, 1.0, 1.0),
+            &mut particles,
+            3.0,
+        );
+        player.shields -= 1;
+        if player.shields <= 0 {
+            state.set(GamePhase::GameOver);
+        }
     }
 }
 
