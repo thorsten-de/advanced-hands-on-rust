@@ -2,7 +2,6 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use bevy::asset::RenderAssetUsages;
-use bevy::asset::io::MissingAssetWriterError;
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
@@ -83,7 +82,9 @@ fn main() -> anyhow::Result<()> {
         cap_velocity.after(apply_velocity),
         check_collisions::<Player, Ground>, bounce, show_performance, score_display,
         camera_follow.after(cap_velocity),
-        spawn_particle_system, particle_age_system],
+        spawn_particle_system, particle_age_system,
+        miner_beacon
+        ],
        exit => [cleanup::<GameElement>]
     );
 
@@ -142,7 +143,7 @@ fn setup(
     // is done with a *projection matrix*.
     let projection = Projection::Orthographic(OrthographicProjection {
         scaling_mode: ScalingMode::WindowSize,
-        scale: 0.5,
+        scale: 1.0,
         ..OrthographicProjection::default_2d()
     });
     commands.spawn((camera, projection, GameElement, MyCamera));
@@ -354,6 +355,40 @@ fn particle_age_system(
         }
 
         sprite.color.set_alpha(particle.lifetime / 2.0);
+    }
+}
+
+fn particle_burst(
+    center: Vec2,
+    color: LinearRgba,
+    spawn: &mut EventWriter<SpawnParticle>,
+    velocity: f32,
+) {
+    for angle in 0..360 {
+        let angle = (angle as f32).to_radians();
+        let velocity = Vec3::new(angle.cos() * velocity, angle.sin() * velocity, 0.0);
+        spawn.write(SpawnParticle {
+            position: center,
+            color,
+            velocity,
+        });
+    }
+}
+
+fn miner_beacon(
+    mut rng: ResMut<RandomNumberGenerator>,
+    miners: Query<&Transform, With<Miner>>,
+    mut spawn: EventWriter<SpawnParticle>,
+) {
+    for miner in miners.iter() {
+        if rng.range(0..100) == 0 {
+            particle_burst(
+                miner.translation.truncate(),
+                LinearRgba::new(1.0, 1.0, 0.0, 1.0),
+                &mut spawn,
+                10.0,
+            );
+        }
     }
 }
 
