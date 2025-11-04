@@ -170,7 +170,7 @@ fn setup(
         Player {
             miners_saved: 0,
             shields: 500,
-            fuel: 100_000
+            fuel: 100_00,
         },
         Velocity::default(),
         PhysicsPosition::new(Vec2::new(0.0, 200.0 + top)),
@@ -248,11 +248,11 @@ fn spawn_particle(
 
 fn movement(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(Entity, &mut Transform), With<Player>>,
+    mut player_query: Query<(Entity, &mut Transform, &mut Player)>,
     mut impulses: EventWriter<Impulse>,
     mut particles: EventWriter<SpawnParticle>,
 ) {
-    let Ok((entity, mut transform)) = player_query.single_mut() else {
+    let Ok((entity, mut transform, mut player)) = player_query.single_mut() else {
         return;
     };
 
@@ -265,13 +265,16 @@ fn movement(
         spawn_particle(&mut particles, &transform.local_x(), &transform);
     }
     if keyboard.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]) {
-        impulses.write(Impulse {
-            target: entity,
-            amount: transform.local_y().as_vec3(),
-            absolute: false,
-            source: 1,
-        });
-        spawn_particle(&mut particles, &transform.local_y(), &transform);
+        if player.fuel > 0 {
+            impulses.write(Impulse {
+                target: entity,
+                amount: transform.local_y().as_vec3(),
+                absolute: false,
+                source: 1,
+            });
+            spawn_particle(&mut particles, &transform.local_y(), &transform);
+            player.fuel -= 1;
+        }
     }
 }
 
