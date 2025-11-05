@@ -272,7 +272,7 @@ fn end_game(mut state: ResMut<NextState<GamePhase>>, player_query: Query<&Player
         return;
     };
 
-    if player.miners_saved == 1 {
+    if player.miners_saved == 20 {
         state.set(GamePhase::GameOver);
     }
 }
