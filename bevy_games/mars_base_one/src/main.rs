@@ -90,6 +90,15 @@ struct ScoreState {
     submitted: bool,
 }
 
+/// DTO to submit high-score entries to the server
+#[derive(serde::Serialize, serde::Deserialize)]
+struct HighScoreEntry {
+    /// Players name
+    name: String,
+    /// Final score
+    score: u32,
+}
+
 fn main() -> anyhow::Result<()> {
     let mut app = App::new();
 
