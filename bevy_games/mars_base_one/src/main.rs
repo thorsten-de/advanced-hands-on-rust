@@ -99,6 +99,19 @@ struct HighScoreEntry {
     score: u32,
 }
 
+/// DTO holding a table of high-scores
+#[derive(serde::Deserialize)]
+struct HighScoreTable {
+    entries: Vec<HighScoreEntry>,
+}
+
+/// Structure to receive a high-score table through a channel
+#[derive(Default)]
+struct HighScoreTableState {
+    entries: Option<HighScoreTable>,
+    receiver: Option<std::sync::mpsc::Receiver<HighScoreTable>>,
+}
+
 fn main() -> anyhow::Result<()> {
     let mut app = App::new();
 
@@ -131,6 +144,10 @@ fn main() -> anyhow::Result<()> {
         exit => []
     );
 
+    app.add_systems(
+        Update,
+        highscore_table.run_if(in_state(GamePhase::MainMenu)),
+    );
     app.add_event::<Impulse>()
         .add_event::<PhysicsTick>()
         .add_event::<OnCollision<Player, Ground>>()
@@ -561,6 +578,41 @@ fn final_score(
                         .send_json(entry)
                         .expect("Failed to submit score");
                 });
+            }
+        });
+    }
+}
+
+/// System for retrieving the highscore table from the server
+fn highscore_table(mut state: Local<HighScoreTableState>, mut egui_context: egui::EguiContexts) {
+    if state.receiver.is_none() {
+        // Create the channel
+        let (transmitter, receiver) = std::sync::mpsc::channel();
+        state.receiver = Some(receiver);
+
+        std::thread::spawn(move || {
+            let table = ureq::get("http://localhost:3030/highscores")
+                .timeout(std::time::Duration::from_secs(5))
+                .call()
+                .unwrap()
+                .into_json::<HighScoreTable>()
+                .unwrap();
+            let _ = transmitter.send(table);
+        });
+    } else {
+        // Receive the result
+        if let Some(rx) = &state.receiver {
+            if let Ok(table) = rx.try_recv() {
+                state.entries = Some(table);
+            }
+        }
+    }
+
+    if let Some(table) = &state.entries {
+        // Display the table, if received
+        egui::egui::Window::new("High Scores").show(egui_context.ctx_mut(), |ui| {
+            for entry in table.entries.iter() {
+                ui.label(format!("{}: {}", entry.name, entry.score));
             }
         });
     }
