@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 
 [workspace]
-members = ["flappy_dragon", "pig", "hello_bevy", "my_library", "bouncy", "mars_base_one"]
+members = ["flappy_dragon", "pig", "hello_bevy", "my_library", "bouncy", "mars_base_one", "highscore_server"]
 
 [workspace.dependencies]
 bevy = "0.16"
