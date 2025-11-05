@@ -68,11 +68,26 @@ pub struct SpawnParticle {
     velocity: Vec3,
 }
 
-// A component that designates a particle entity
+/// A component that designates a particle entity
 #[derive(Component)]
 pub struct Particle {
     /// How log does it take for a particle to fade away?
     pub lifetime: f32,
+}
+
+/// At the end of the game, this event notifies about the final score
+#[derive(Event)]
+struct FinalScore(u32);
+
+/// State for the players score after playing the game
+#[derive(Default)]
+struct ScoreState {
+    /// Optional final score, may not be submitted yet
+    score: Option<u32>,
+    /// Players name
+    player_name: String,
+    /// Has the score been submitted to the highscore server?
+    submitted: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -92,12 +107,18 @@ fn main() -> anyhow::Result<()> {
         collect_and_despawn_game_element::<Fuel,  { BurstColor:: Orange as u8 }>,
         collect_and_despawn_game_element::<Battery,  { BurstColor::Magenta as u8 }>
         ],
-       exit => [cleanup::<GameElement>]
+       exit => [submit_score, cleanup::<GameElement>.after(submit_score)]
     );
 
     add_phase!(app, GamePhase, GamePhase::WorldBuilding,
         start => [ spawn_builder],
         run => [ show_builder ],
+        exit => []
+    );
+
+    add_phase!(app, GamePhase, GamePhase::GameOver,
+        start => [],
+        run => [ final_score ],
         exit => []
     );
 
@@ -108,6 +129,7 @@ fn main() -> anyhow::Result<()> {
         .add_event::<OnCollision<Player, Fuel>>()
         .add_event::<OnCollision<Player, Battery>>()
         .add_event::<SpawnParticle>()
+        .add_event::<FinalScore>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Mars Base One".to_string(),
@@ -224,7 +246,7 @@ fn end_game(mut state: ResMut<NextState<GamePhase>>, player_query: Query<&Player
         return;
     };
 
-    if player.miners_saved == 20 {
+    if player.miners_saved == 1 {
         state.set(GamePhase::GameOver);
     }
 }
@@ -489,6 +511,37 @@ fn score_display(player: Query<&Player>, mut egui_context: egui::EguiContexts) {
         ui.label(format!("Shields: {}", player.shields));
         ui.label(format!("Fuel: {}", player.fuel));
     });
+}
+
+/// Emits a FinalScore event with the player's score to subsequent game phases
+fn submit_score(player: Query<&Player>, mut final_score: EventWriter<FinalScore>) {
+    for player in player.iter() {
+        final_score.write(FinalScore(player.score));
+    }
+}
+
+/// Receives FinalScore events and displays the score to the user
+fn final_score(
+    mut final_score: EventReader<FinalScore>,
+    mut state: Local<ScoreState>,
+    mut egui_context: egui::EguiContexts,
+) {
+    // Set the final score to the last received message
+    for score in final_score.read() {
+        state.score = Some(score.0);
+    }
+
+    // Display the score window with text input element
+    if let Some(score) = state.score {
+        egui::egui::Window::new("Final Score").show(egui_context.ctx_mut(), |ui| {
+            ui.label(format!("Final score: {}", score));
+            ui.label("Please enter your name:");
+            ui.text_edit_singleline(&mut state.player_name);
+            if ui.button("Submit Score").clicked() {
+                // TODO: Submit score to server
+            }
+        });
+    }
 }
 
 /// Defines the world by a 2d-matrix of tiles.
