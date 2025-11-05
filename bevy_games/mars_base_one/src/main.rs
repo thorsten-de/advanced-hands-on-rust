@@ -539,6 +539,9 @@ fn final_score(
     for score in final_score.read() {
         state.score = Some(score.0);
     }
+    if state.submitted {
+        return;
+    }
 
     // Display the score window with text input element
     if let Some(score) = state.score {
@@ -547,7 +550,17 @@ fn final_score(
             ui.label("Please enter your name:");
             ui.text_edit_singleline(&mut state.player_name);
             if ui.button("Submit Score").clicked() {
-                // TODO: Submit score to server
+                state.submitted = true;
+                let entry = HighScoreEntry {
+                    name: state.player_name.clone(),
+                    score,
+                };
+                std::thread::spawn(move || {
+                    ureq::post("http://localhost:3030/submit-score")
+                        .timeout(std::time::Duration::from_secs(5))
+                        .send_json(entry)
+                        .expect("Failed to submit score");
+                });
             }
         });
     }

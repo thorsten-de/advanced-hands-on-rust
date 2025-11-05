@@ -7,3 +7,4 @@ edition = "2024"
 bevy = { workspace = true }
 my_library = { path = "../my_library" }
 serde = { version = "1.0.228", features = ["derive"] }
+ureq = { version = "2", features = ["json"] }
